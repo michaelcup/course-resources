@@ -68,7 +68,11 @@ class ThemeToggle {
         const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
         
         this.applyTheme(theme);
-        this.updateToggleState(theme);
+        
+        // Wait a bit for DOM to be ready, then update toggle state
+        setTimeout(() => {
+            this.updateToggleState(theme);
+        }, 100);
     }
     
     toggleTheme() {
@@ -94,10 +98,17 @@ class ThemeToggle {
     updateToggleState(theme) {
         const checkbox = document.getElementById('themeToggleCheckbox');
         
-        if (!checkbox) return;
+        if (!checkbox) {
+            // If checkbox not found, try again after a short delay
+            setTimeout(() => this.updateToggleState(theme), 100);
+            return;
+        }
         
         // Set checkbox state without triggering change event
-        checkbox.checked = theme === 'dark';
+        const shouldBeChecked = theme === 'dark';
+        if (checkbox.checked !== shouldBeChecked) {
+            checkbox.checked = shouldBeChecked;
+        }
     }
     
     getCurrentTheme() {

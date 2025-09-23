@@ -153,6 +153,19 @@ class LessonUI {
             this.updateFromLessonManager();
         };
         
+        // Override trackContent method to ensure our progress bar updates
+        const originalTrackContent = this.lessonManager.trackContent.bind(this.lessonManager);
+        
+        this.lessonManager.trackContent = () => {
+            // Call original method
+            originalTrackContent();
+            
+            // Update our progress bar immediately
+            if (this.progressBar) {
+                this.progressBar.updateProgress(this.lessonManager.requirements.contentProgress);
+            }
+        };
+        
         // Initial update
         this.updateFromLessonManager();
     }
@@ -165,7 +178,13 @@ class LessonUI {
         
         // Update progress bar
         if (this.progressBar) {
-            this.progressBar.updateProgress(this.lessonManager.requirements.contentProgress);
+            const progress = this.lessonManager.requirements.contentProgress;
+            this.progressBar.updateProgress(progress);
+            
+            // Debug logging
+            if (this.options.debug) {
+                console.log('Updating progress bar:', progress + '%');
+            }
         }
         
         // Update bottom bar requirements
@@ -202,6 +221,11 @@ class LessonUI {
             }
             
             this.bottomBar.updateRequirements(updates);
+            
+            // Debug logging
+            if (this.options.debug) {
+                console.log('Updating bottom bar requirements:', updates);
+            }
         }
     }
     
