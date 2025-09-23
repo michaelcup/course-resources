@@ -1,29 +1,22 @@
 /**
- * Thinkific Multimedia Lesson Manager v2.4
- * Working version with both video and scroll tracking + linear progress
+ * Thinkific Multimedia Lesson Manager v2.5
+ * Simplified to focus on reliable scroll tracking only
  */
 
 class LessonManager {
     constructor(options = {}) {
         this.requirements = {
-            contentProgress: 0,  // 0-100% based on reading/media consumption
+            contentProgress: 0,  // 0-100% based on highest scroll reached
             quizPassed: false
         };
         
         this.selectedAnswers = {};
         this.lessonId = options.lessonId || this.getLessonId();
-        this.quizState = 'not-started'; // 'not-started', 'in-progress', 'failed', 'passed'
+        this.quizState = 'not-started';
         this.debug = options.debug || false;
         
-        // Media tracking
-        this.mediaElement = null;
-        this.mediaDuration = 0;
-        this.mediaWatched = 0;
-        this.hasMedia = false;
-        
-        // Content end detection cache
-        this.contentEndElement = null;
-        this.contentEndCalculated = false;
+        // Simple scroll tracking
+        this.highestScrollProgress = 0;
         
         this.init();
     }
@@ -32,153 +25,51 @@ class LessonManager {
      * Initialize the lesson manager
      */
     init() {
-        this.log('Initializing lesson manager for:', this.lessonId);
+        this.log('Initializing simple scroll lesson manager for:', this.lessonId);
         
-        this.setupMediaTracking();
         this.setupEventListeners();
         this.loadProgress();
         this.declareLessonRequirements();
         
-        // Initial content tracking after everything is set up
+        // Initial scroll check
         setTimeout(() => {
-            this.trackContent();
+            this.trackScrollProgress();
         }, 100);
         
         this.log('Lesson manager initialized successfully');
     }
     
     /**
-     * Set up media tracking for video/audio elements
+     * Track scroll progress - simple and reliable
      */
-    setupMediaTracking() {
-        // Look for video or audio elements
-        this.mediaElement = document.querySelector('video, audio');
+    trackScrollProgress() {
+        // Calculate current scroll progress
+        const scrollTop = window.scrollY;
+        const documentHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        const scrollableHeight = documentHeight - windowHeight;
         
-        if (this.mediaElement) {
-            this.hasMedia = true;
-            this.log('Media element found:', this.mediaElement.tagName);
-            
-            this.mediaElement.addEventListener('loadedmetadata', () => {
-                this.mediaDuration = this.mediaElement.duration;
-                this.log('Media duration:', this.mediaDuration);
-                this.trackContent(); // Update progress when duration is known
-            });
-            
-            this.mediaElement.addEventListener('timeupdate', () => {
-                if (this.mediaDuration > 0) {
-                    this.mediaWatched = Math.max(this.mediaWatched, this.mediaElement.currentTime);
-                    this.trackContent();
-                }
-            });
-            
-            this.mediaElement.addEventListener('ended', () => {
-                this.mediaWatched = this.mediaDuration;
-                this.trackContent();
-            });
-        } else {
-            this.log('No media element found - using scroll tracking only');
-        }
-    }
-    
-    /**
-     * Find where the reading content ends (cached for performance)
-     */
-    findContentEndElement() {
-        if (this.contentEndCalculated) {
-            return this.contentEndElement;
+        let currentScrollProgress = 0;
+        if (scrollableHeight > 0) {
+            currentScrollProgress = Math.min(100, Math.max(0, (scrollTop / scrollableHeight) * 100));
         }
         
-        // Look for content end markers in order of preference
-        const selectors = [
-            '.content-section',
-            '.lesson-content', 
-            '#content',
-            '.quiz-container',
-            '#quizContainer',
-            '.interactive-section'
-        ];
-        
-        for (const selector of selectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                // If it's a quiz/interactive element, use the previous sibling
-                if (selector.includes('quiz') || selector.includes('interactive')) {
-                    const prevElement = element.previousElementSibling;
-                    if (prevElement) {
-                        this.contentEndElement = prevElement;
-                        this.contentEndCalculated = true;
-                        this.log('Content end found before', selector, ':', prevElement.tagName);
-                        return this.contentEndElement;
-                    }
-                }
-                
-                // For content sections, use the element itself
-                this.contentEndElement = element;
-                this.contentEndCalculated = true;
-                this.log('Content end found at', selector, ':', element.tagName);
-                return this.contentEndElement;
-            }
-        }
-        
-        this.contentEndCalculated = true;
-        this.log('No specific content end found, using full document');
-        return null;
-    }
-    
-    /**
-     * Track content progress - linear progress based on media AND scroll
-     */
-    trackContent() {
-        let mediaProgress = 0;
-        let scrollProgress = 0;
-        
-        // Calculate media progress
-        if (this.hasMedia && this.mediaDuration > 0) {
-            mediaProgress = Math.min(100, (this.mediaWatched / this.mediaDuration) * 100);
-        }
-        
-        // Calculate scroll progress
-        const contentEnd = this.findContentEndElement();
-        if (contentEnd) {
-            // Calculate based on content end
-            const contentEndRect = contentEnd.getBoundingClientRect();
-            const contentEndTop = contentEnd.offsetTop + contentEnd.offsetHeight;
-            const scrolled = window.scrollY;
-            const windowHeight = window.innerHeight;
+        // Only update if this is higher than our previous highest
+        if (currentScrollProgress > this.highestScrollProgress) {
+            this.highestScrollProgress = currentScrollProgress;
+            this.requirements.contentProgress = this.highestScrollProgress;
             
-            // How much we need to scroll to see the end of content
-            const scrollNeeded = Math.max(0, contentEndTop - windowHeight);
-            
-            if (scrollNeeded > 0) {
-                scrollProgress = Math.min(100, (scrolled / scrollNeeded) * 100);
-            } else {
-                // Content fits in viewport, progress based on any scrolling
-                scrollProgress = scrolled > 10 ? 100 : 0;
-            }
-        } else {
-            // Fallback: use full document
-            const totalScrollable = document.documentElement.scrollHeight - window.innerHeight;
-            if (totalScrollable > 0) {
-                scrollProgress = Math.min(100, (window.scrollY / totalScrollable) * 100);
-            }
-        }
-        
-        // Take maximum of both progresses for linear advancement
-        const newProgress = Math.max(mediaProgress, scrollProgress);
-        
-        // Always update progress (linear), don't require it to increase
-        if (Math.abs(newProgress - this.requirements.contentProgress) > 0.5) {
-            this.requirements.contentProgress = newProgress;
             this.updateProgressDisplay();
             
             if (this.debug) {
-                this.log(`Progress updated: ${newProgress.toFixed(1)}% (media: ${mediaProgress.toFixed(1)}%, scroll: ${scrollProgress.toFixed(1)}%)`);
+                this.log(`Scroll progress updated: ${this.highestScrollProgress.toFixed(1)}% (scrolled: ${scrollTop}px of ${scrollableHeight}px)`);
             }
+            
+            // Save progress
+            this.saveProgress();
+        } else if (this.debug) {
+            this.log(`Scroll progress unchanged: current ${currentScrollProgress.toFixed(1)}% <= highest ${this.highestScrollProgress.toFixed(1)}%`);
         }
-        
-        // Throttled save
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(() => this.saveProgress(), 1000);
     }
     
     /**
@@ -190,43 +81,36 @@ class LessonManager {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Scroll tracking
+        // Simple scroll tracking
         this.setupScrollTracking();
         
         this.log('Event listeners setup complete');
     }
     
     /**
-     * Set up scroll tracking
+     * Set up scroll tracking - simple throttled version
      */
     setupScrollTracking() {
-        let ticking = false;
+        let scrollTimeout;
         
         const handleScroll = () => {
-            if (!ticking) {
-                requestAnimationFrame(() => {
-                    this.trackContent();
-                    ticking = false;
-                });
-                ticking = true;
-            }
+            // Throttle scroll events
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.trackScrollProgress();
+            }, 100);
         };
         
-        // Smooth scroll tracking using requestAnimationFrame
         window.addEventListener('scroll', handleScroll, { passive: true });
         
-        // Track on resize too
+        // Also track on window resize
         window.addEventListener('resize', () => {
-            // Reset content end calculation on resize
-            this.contentEndCalculated = false;
-            this.contentEndElement = null;
-            
             setTimeout(() => {
-                this.trackContent();
+                this.trackScrollProgress();
             }, 100);
         });
         
-        this.log('Scroll tracking enabled');
+        this.log('Simple scroll tracking enabled');
     }
     
     /**
@@ -247,7 +131,6 @@ class LessonManager {
             detail: {
                 contentProgress: this.requirements.contentProgress,
                 quizState: this.quizState,
-                hasMedia: this.hasMedia,
                 lessonId: this.lessonId
             }
         }));
@@ -267,11 +150,11 @@ class LessonManager {
             if (this.requirements.contentProgress >= 90) {
                 readingIcon.classList.remove('incomplete');
                 readingIcon.classList.add('complete');
-                readingText.textContent = this.hasMedia ? 'Media Complete' : 'Reading Complete';
+                readingText.textContent = 'Reading Complete';
             } else {
                 readingIcon.classList.remove('complete');
                 readingIcon.classList.add('incomplete');
-                readingText.textContent = this.hasMedia ? 'Media Incomplete' : 'Reading Incomplete';
+                readingText.textContent = 'Reading Incomplete';
             }
         }
         
@@ -410,7 +293,7 @@ class LessonManager {
         this.log('Quiz reset');
     }
     
-    // Utility methods (keeping these simple)
+    // Utility methods
     
     getLessonId() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -445,7 +328,10 @@ class LessonManager {
                 const progress = JSON.parse(saved);
                 this.requirements = { ...this.requirements, ...progress.requirements };
                 this.quizState = progress.quizState || 'not-started';
-                this.mediaWatched = progress.mediaWatched || 0;
+                
+                // Load the highest scroll progress achieved
+                this.highestScrollProgress = progress.highestScrollProgress || this.requirements.contentProgress || 0;
+                this.requirements.contentProgress = this.highestScrollProgress;
                 
                 this.updateProgressDisplay();
                 
@@ -453,7 +339,7 @@ class LessonManager {
                     this.setQuizState('completed');
                 }
                 
-                this.log('Progress loaded:', this.requirements);
+                this.log('Progress loaded:', this.requirements, 'Highest scroll:', this.highestScrollProgress);
             }
         } catch (error) {
             console.error('Error loading progress:', error);
@@ -465,12 +351,12 @@ class LessonManager {
             const progress = {
                 requirements: this.requirements,
                 quizState: this.quizState,
+                highestScrollProgress: this.highestScrollProgress,
                 timestamp: new Date().toISOString(),
-                selectedAnswers: this.selectedAnswers,
-                mediaWatched: this.mediaWatched
+                selectedAnswers: this.selectedAnswers
             };
             localStorage.setItem(`lesson_${this.lessonId}_progress`, JSON.stringify(progress));
-            this.log('Progress saved');
+            this.log('Progress saved, highest scroll:', this.highestScrollProgress);
         } catch (error) {
             console.error('Error saving progress:', error);
         }
@@ -541,11 +427,9 @@ class LessonManager {
         return {
             lessonId: this.lessonId,
             contentProgress: this.requirements.contentProgress,
+            highestScrollProgress: this.highestScrollProgress,
             quizPassed: this.requirements.quizPassed,
             quizState: this.quizState,
-            hasMedia: this.hasMedia,
-            mediaWatched: this.mediaWatched,
-            mediaDuration: this.mediaDuration,
             timestamp: new Date().toISOString()
         };
     }
