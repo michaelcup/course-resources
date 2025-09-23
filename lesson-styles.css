@@ -1,17 +1,17 @@
 /* Thinkific Multimedia Lesson Stylesheet v2.1 */
 
 :root {
-    --primary-color: #1e40af;
-    --secondary-color: #3730a3;
+    --primary-color: #3776db;
+    --secondary-color: #3776db;
     --text-primary: #292929;
     --text-secondary: #4b5563;
     --text-muted: #9ca3af;
-    --bg-primary: #dfdfdf;
-    --bg-secondary: #f9fafb;
+    --bg-primary: #f1f1f1;
+    --bg-secondary: #ececec;
     --bg-code: #f3f4f6;
     --border-color: #e5e7eb;
     --success-color: #10b981;
-    --error-color: #ef4444;
+    --error-color: #f87171;
     --warning-color: #f59e0b;
     --info-color: #3b82f6;
     --quote-border: #3b82f6;
@@ -22,8 +22,8 @@
 
 /* Dark mode variables */
 [data-theme="dark"] {
-    --primary-color: #3b82f6;
-    --secondary-color: #1d4ed8;
+    --primary-color: rgb(97, 158, 255);
+    --secondary-color: rgb(97, 158, 255);
     --text-primary: #f9fafb;
     --text-secondary: #d1d5db;
     --text-muted: #6b7280;
@@ -34,8 +34,8 @@
     --success-color: #10b981;
     --error-color: #f87171;
     --warning-color: #fbbf24;
-    --info-color: #60a5fa;
-    --quote-border: #60a5fa;
+    --info-color: rgb(97, 158, 255);
+    --quote-border: rgb(97, 158, 255);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
@@ -155,7 +155,7 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    background: white;
+    background: var(--bg-primary);
     border-top: 1px solid var(--border-color);
     z-index: 1000;
     padding: 1rem;
@@ -484,9 +484,8 @@ p {
 
 .key-phrase {
     color: var(--primary-color);
-    font-weight: 600;
-    background: linear-gradient(to bottom, transparent 60%, rgba(59, 130, 246, 0.15) 60%);
-    padding: 0 3px;
+    font-weight: 625;
+    text-decoration-line: underline;
 }
 
 /* Numbered List - Legacy support */
