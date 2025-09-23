@@ -1,6 +1,6 @@
 /**
- * DEBUG VERSION - Thinkific Multimedia Lesson Manager v2.2
- * Enhanced with extensive debugging to identify scroll tracking issues
+ * Thinkific Multimedia Lesson Manager v2.3
+ * Enhanced with proper media + scroll progress tracking and smart content end detection
  */
 
 class LessonManager {
@@ -13,18 +13,13 @@ class LessonManager {
         this.selectedAnswers = {};
         this.lessonId = options.lessonId || this.getLessonId();
         this.quizState = 'not-started'; // 'not-started', 'in-progress', 'failed', 'passed'
-        this.debug = true; // FORCE DEBUG ON FOR TROUBLESHOOTING
+        this.debug = options.debug || false;
         
         // Media tracking
         this.mediaElement = null;
         this.mediaDuration = 0;
         this.mediaWatched = 0;
         this.hasMedia = false;
-        
-        // Debug counters
-        this.scrollEventCount = 0;
-        this.trackContentCallCount = 0;
-        this.progressUpdateCount = 0;
         
         this.init();
     }
@@ -33,7 +28,7 @@ class LessonManager {
      * Initialize the lesson manager
      */
     init() {
-        console.log('🚀 [DEBUG] Initializing lesson manager for:', this.lessonId);
+        this.log('Initializing lesson manager for:', this.lessonId);
         
         this.setupEventListeners();
         this.setupMediaTracking();
@@ -41,17 +36,7 @@ class LessonManager {
         this.declareLessonRequirements();
         this.trackContent();
         
-        console.log('✅ [DEBUG] Lesson manager initialized successfully');
-        
-        // Debug info about current state
-        setTimeout(() => {
-            console.log('📊 [DEBUG] Initial state check:');
-            console.log('- Has media:', this.hasMedia);
-            console.log('- Scroll height:', document.documentElement.scrollHeight);
-            console.log('- Window height:', window.innerHeight);
-            console.log('- Current scroll:', window.scrollY);
-            console.log('- Content progress:', this.requirements.contentProgress);
-        }, 1000);
+        this.log('Lesson manager initialized successfully');
     }
     
     /**
@@ -63,11 +48,11 @@ class LessonManager {
         
         if (this.mediaElement) {
             this.hasMedia = true;
-            console.log('🎥 [DEBUG] Media element found:', this.mediaElement.tagName);
+            this.log('Media element found:', this.mediaElement.tagName);
             
             this.mediaElement.addEventListener('loadedmetadata', () => {
                 this.mediaDuration = this.mediaElement.duration;
-                console.log('⏱️ [DEBUG] Media duration:', this.mediaDuration);
+                this.log('Media duration:', this.mediaDuration);
             });
             
             this.mediaElement.addEventListener('timeupdate', () => {
@@ -81,59 +66,98 @@ class LessonManager {
                 this.mediaWatched = this.mediaDuration;
                 this.trackContent();
             });
-        } else {
-            console.log('📖 [DEBUG] No media element found - using scroll tracking');
         }
     }
     
     /**
-     * Track content progress (reading + media)
+     * Track content progress - takes maximum of media and scroll progress
      */
     trackContent() {
-        this.trackContentCallCount++;
+        let mediaProgress = 0;
+        let scrollProgress = 0;
         
-        let contentProgress = 0;
-        
+        // Calculate media progress if available
         if (this.hasMedia && this.mediaDuration > 0) {
-            // If there's media, progress is based on media consumption
-            contentProgress = Math.min(100, Math.round((this.mediaWatched / this.mediaDuration) * 100));
-            console.log(`🎥 [DEBUG] Media progress: ${contentProgress}% (${this.mediaWatched}/${this.mediaDuration}s)`);
+            mediaProgress = Math.min(100, Math.round((this.mediaWatched / this.mediaDuration) * 100));
+        }
+        
+        // Calculate scroll progress based on reading content end (not full page)
+        const readingEndElement = this.findReadingEndElement();
+        if (readingEndElement) {
+            const readingEndTop = readingEndElement.offsetTop;
+            const scrolled = window.scrollY;
+            const windowHeight = window.innerHeight;
+            
+            // Calculate progress based on reading content only
+            const scrollableToReadingEnd = Math.max(0, readingEndTop - windowHeight);
+            
+            if (scrollableToReadingEnd > 0) {
+                scrollProgress = Math.min(100, Math.round((scrolled / scrollableToReadingEnd) * 100));
+            } else {
+                // If reading content fits in one screen, consider it complete when scrolled at all
+                scrollProgress = scrolled > 0 ? 100 : 0;
+            }
         } else {
-            // No media, use scroll-based reading progress
+            // Fallback to full document if no reading end found
             const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrolled = window.scrollY;
             
-            console.log(`📏 [DEBUG] Scroll calculation:
-                - Document scroll height: ${document.documentElement.scrollHeight}
-                - Window inner height: ${window.innerHeight}
-                - Scrollable area: ${scrollHeight}
-                - Current scroll: ${scrolled}`);
-            
             if (scrollHeight > 0) {
-                contentProgress = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
-                console.log(`📊 [DEBUG] Calculated scroll progress: ${contentProgress}%`);
-            } else {
-                console.log('⚠️ [DEBUG] No scrollable content (scrollHeight <= 0)');
-                contentProgress = 0;
+                scrollProgress = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
             }
         }
         
-        // Only update if progress increased
-        if (contentProgress > this.requirements.contentProgress) {
-            console.log(`⬆️ [DEBUG] Progress increased from ${this.requirements.contentProgress}% to ${contentProgress}%`);
-            this.requirements.contentProgress = contentProgress;
-            this.updateProgressDisplay();
-        } else if (contentProgress < this.requirements.contentProgress) {
-            console.log(`⬇️ [DEBUG] Progress would decrease from ${this.requirements.contentProgress}% to ${contentProgress}% - not updating`);
-        } else {
-            console.log(`➡️ [DEBUG] Progress unchanged at ${contentProgress}%`);
-        }
+        // Take the maximum of media and scroll progress
+        const newProgress = Math.max(mediaProgress, scrollProgress);
         
-        console.log(`📈 [DEBUG] trackContent called ${this.trackContentCallCount} times`);
+        // Only update if progress increased
+        if (newProgress > this.requirements.contentProgress) {
+            this.requirements.contentProgress = newProgress;
+            this.updateProgressDisplay();
+            
+            if (this.debug) {
+                this.log('Content progress updated:', newProgress + '%', 
+                    `(media: ${mediaProgress}%, scroll: ${scrollProgress}%)`);
+            }
+        }
         
         // Throttled save to avoid excessive localStorage writes
         clearTimeout(this.saveTimeout);
         this.saveTimeout = setTimeout(() => this.saveProgress(), 1000);
+    }
+    
+    /**
+     * Find where the reading content ends (before quiz/interactive elements)
+     */
+    findReadingEndElement() {
+        // Look for common content end markers in order of preference
+        const contentEndSelectors = [
+            '.content-section',           // Main content section
+            '.lesson-content',           // Alternative content wrapper
+            '#content',                  // Simple content ID
+            '.quiz-container',           // Quiz starts here, so content ends before
+            '#quizContainer',           // Alternative quiz ID
+            '.interactive-section',      // Any interactive section
+            'main .container'           // Main container fallback
+        ];
+        
+        for (const selector of contentEndSelectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                // If it's a quiz/interactive element, we want the element BEFORE it
+                if (selector.includes('quiz') || selector.includes('interactive')) {
+                    const previousElement = element.previousElementSibling;
+                    if (previousElement) {
+                        return previousElement;
+                    }
+                } else {
+                    // For content sections, we want the end of that section
+                    return element;
+                }
+            }
+        }
+        
+        return null;
     }
     
     /**
@@ -145,113 +169,67 @@ class LessonManager {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Scroll tracking for lessons without media
+        // Scroll tracking for all lessons
         this.setupScrollTracking();
         
-        console.log('🎯 [DEBUG] Event listeners setup complete');
+        this.log('Event listeners setup complete');
     }
     
     /**
-     * Set up scroll tracking with extensive debugging
+     * Set up scroll tracking (works alongside media tracking)
      */
     setupScrollTracking() {
-        console.log('🎯 [DEBUG] Setting up scroll tracking...');
-        
         let scrollTimeout;
-        let lastScrollY = window.scrollY;
+        let lastScrollY = 0;
         
         const handleScroll = () => {
-            this.scrollEventCount++;
             const currentScrollY = window.scrollY;
-            
-            console.log(`📜 [DEBUG] Scroll event #${this.scrollEventCount}: ${lastScrollY} → ${currentScrollY}`);
-            
-            // Check if we should skip (media playing)
-            if (this.hasMedia && this.mediaElement && !this.mediaElement.paused) {
-                console.log('⏸️ [DEBUG] Skipping scroll tracking - media is playing');
-                return;
-            }
             
             // Only update if scroll position changed
             if (currentScrollY !== lastScrollY) {
-                console.log(`🔄 [DEBUG] Scroll position changed, setting timeout to track content`);
                 lastScrollY = currentScrollY;
                 
                 clearTimeout(scrollTimeout);
                 scrollTimeout = setTimeout(() => {
-                    console.log('⏰ [DEBUG] Scroll timeout triggered, calling trackContent()');
                     this.trackContent();
                 }, 100);
-            } else {
-                console.log('➡️ [DEBUG] Scroll position unchanged');
             }
         };
         
-        // Test if scroll event fires at all
-        window.addEventListener('scroll', () => {
-            console.log('🔥 [DEBUG] RAW scroll event fired');
-        }, { passive: true, once: true });
-        
-        // Main scroll listener
+        // Use passive listener for better performance
         window.addEventListener('scroll', handleScroll, { passive: true });
-        console.log('👂 [DEBUG] Scroll event listener attached');
         
-        // Also track on resize
+        // Also track on resize (content height might change)
         window.addEventListener('resize', () => {
-            console.log('📐 [DEBUG] Window resized, recalculating content');
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
                 this.trackContent();
             }, 250);
         });
         
-        // Test scroll manually
+        // Initial content tracking
         setTimeout(() => {
-            console.log('🧪 [DEBUG] Testing manual scroll tracking...');
             this.trackContent();
         }, 500);
         
-        // Force a scroll event to test
-        setTimeout(() => {
-            console.log('🧪 [DEBUG] Forcing scroll event test...');
-            const currentScroll = window.scrollY;
-            window.scrollTo(0, currentScroll + 1);
-            setTimeout(() => window.scrollTo(0, currentScroll), 100);
-        }, 2000);
-        
-        console.log('✅ [DEBUG] Scroll tracking setup complete');
+        this.log('Scroll tracking setup complete');
     }
     
     /**
-     * Update all progress displays with enhanced debugging
+     * Update all progress displays
      */
     updateProgressDisplay() {
-        this.progressUpdateCount++;
-        console.log(`🎨 [DEBUG] updateProgressDisplay called (${this.progressUpdateCount} times)`);
-        
         // Update main progress bar (multiple possible selectors for compatibility)
         const progressSelectors = ['#progressBar', '.progress-bar-fill', '[data-progress-bar]'];
         let progressBarEl = null;
         
-        console.log('🔍 [DEBUG] Looking for progress bar element...');
         for (const selector of progressSelectors) {
             progressBarEl = document.querySelector(selector);
-            if (progressBarEl) {
-                console.log(`✅ [DEBUG] Found progress bar with selector: ${selector}`);
-                break;
-            } else {
-                console.log(`❌ [DEBUG] No element found for selector: ${selector}`);
-            }
+            if (progressBarEl) break;
         }
         
         if (progressBarEl) {
-            const newWidth = this.requirements.contentProgress + '%';
-            const oldWidth = progressBarEl.style.width;
-            progressBarEl.style.width = newWidth;
-            console.log(`🎨 [DEBUG] Updated progress bar: ${oldWidth} → ${newWidth}`);
-        } else {
-            console.log('⚠️ [DEBUG] Progress bar element not found with any selector');
-            console.log('📋 [DEBUG] Available elements with IDs:', Array.from(document.querySelectorAll('[id]')).map(el => `#${el.id}`));
+            progressBarEl.style.width = this.requirements.contentProgress + '%';
         }
         
         // Update bottom bar with dynamic status
@@ -266,8 +244,6 @@ class LessonManager {
                 lessonId: this.lessonId
             }
         }));
-        
-        console.log('📡 [DEBUG] Dispatched lessonProgressUpdated event');
     }
     
     /**
@@ -347,7 +323,7 @@ class LessonManager {
         const questionIndex = Array.from(document.querySelectorAll('.question-block')).indexOf(question);
         this.selectedAnswers[questionIndex] = option.getAttribute('data-answer');
         
-        console.log('📝 [DEBUG] Answer selected:', questionIndex, this.selectedAnswers[questionIndex]);
+        this.log('Answer selected:', questionIndex, this.selectedAnswers[questionIndex]);
     }
     
     /**
@@ -408,7 +384,7 @@ class LessonManager {
         this.updateProgressDisplay();
         this.saveProgress();
         
-        console.log('✅ [DEBUG] Quiz checked:', { correctCount, total: questions.length, passed: allCorrect });
+        this.log('Quiz checked:', { correctCount, total: questions.length, passed: allCorrect });
     }
     
     /**
@@ -439,7 +415,7 @@ class LessonManager {
         // Notify parent of reset
         this.notifyReset();
         
-        console.log('🔄 [DEBUG] Quiz reset');
+        this.log('Quiz reset');
     }
     
     /**
@@ -471,7 +447,7 @@ class LessonManager {
                 }
             }, '*');
             
-            console.log('📢 [DEBUG] Declared lesson requirements to parent');
+            this.log('Declared lesson requirements to parent');
         }
     }
     
@@ -490,10 +466,10 @@ class LessonManager {
                     this.setQuizState('completed');
                 }
                 
-                console.log('💾 [DEBUG] Progress loaded:', this.requirements);
+                this.log('Progress loaded:', this.requirements);
             }
         } catch (error) {
-            console.error('❌ [DEBUG] Error loading progress:', error);
+            console.error('Error loading progress:', error);
         }
     }
     
@@ -507,9 +483,9 @@ class LessonManager {
                 mediaWatched: this.mediaWatched
             };
             localStorage.setItem(`lesson_${this.lessonId}_progress`, JSON.stringify(progress));
-            console.log('💾 [DEBUG] Progress saved');
+            this.log('Progress saved');
         } catch (error) {
-            console.error('❌ [DEBUG] Error saving progress:', error);
+            console.error('Error saving progress:', error);
         }
     }
     
@@ -542,7 +518,7 @@ class LessonManager {
                 break;
         }
         
-        console.log('🎯 [DEBUG] Quiz display state changed to:', state);
+        this.log('Quiz display state changed to:', state);
     }
     
     notifyCompletion() {
@@ -554,7 +530,7 @@ class LessonManager {
                 timestamp: new Date().toISOString()
             }, '*');
             
-            console.log('📢 [DEBUG] Sent completion message to parent');
+            this.log('Sent completion message to parent');
         }
     }
     
@@ -566,12 +542,14 @@ class LessonManager {
                 timestamp: new Date().toISOString()
             }, '*');
             
-            console.log('📢 [DEBUG] Sent reset message to parent');
+            this.log('Sent reset message to parent');
         }
     }
     
     log(...args) {
-        console.log('[LessonManager]', ...args);
+        if (this.debug || window.location.hostname === 'localhost') {
+            console.log('[LessonManager]', ...args);
+        }
     }
     
     getAnalytics() {
