@@ -110,7 +110,61 @@ class LessonUI {
             this.setupLessonManagerIntegration();
         }
         
+        // Set up scroll tracking for progress bar
+        this.setupScrollTracking();
+        
         this.setupCustomEventListeners();
+    }
+    
+    /**
+     * Set up scroll tracking for progress bar updates
+     */
+    setupScrollTracking() {
+        if (!this.progressBar) return;
+        
+        let scrollTimeout;
+        
+        const updateScrollProgress = () => {
+            // Clear existing timeout
+            clearTimeout(scrollTimeout);
+            
+            // Throttle scroll updates
+            scrollTimeout = setTimeout(() => {
+                // Check if LessonManager exists and has media
+                const hasMedia = this.lessonManager && this.lessonManager.hasMedia;
+                
+                if (!hasMedia) {
+                    // Calculate scroll progress for text content
+                    const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    const scrolled = window.scrollY;
+                    const progress = scrollHeight > 0 ? Math.min(100, Math.round((scrolled / scrollHeight) * 100)) : 0;
+                    
+                    // Update progress bar
+                    this.progressBar.updateProgress(progress);
+                    
+                    // Update LessonManager if available
+                    if (this.lessonManager) {
+                        this.lessonManager.requirements.contentProgress = Math.max(
+                            this.lessonManager.requirements.contentProgress, 
+                            progress
+                        );
+                        
+                        // Trigger UI updates (saveProgress is handled by LessonManager's throttled mechanism)
+                        this.updateFromLessonManager();
+                    }
+                    
+                    if (this.options.debug) {
+                        console.log('Scroll progress updated:', progress + '%');
+                    }
+                }
+            }, 100); // Throttle to every 100ms
+        };
+        
+        // Add scroll listener
+        window.addEventListener('scroll', updateScrollProgress, { passive: true });
+        
+        // Initial calculation
+        updateScrollProgress();
     }
     
     /**

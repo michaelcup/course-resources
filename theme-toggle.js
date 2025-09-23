@@ -64,15 +64,16 @@ class ThemeToggle {
         const savedTheme = localStorage.getItem('theme');
         const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         
-        // Use saved theme, or fall back to system preference, or default to light
+        // Use saved theme, or fall back to system preference, or default to dark (to prevent flash)
         const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
         
+        // Apply theme immediately
         this.applyTheme(theme);
         
         // Wait a bit for DOM to be ready, then update toggle state
         setTimeout(() => {
             this.updateToggleState(theme);
-        }, 100);
+        }, 50);
     }
     
     toggleTheme() {

@@ -1,6 +1,28 @@
 /* Thinkific Multimedia Lesson Stylesheet v2.1 */
 
+/* Default to dark mode to prevent flash, will be overridden by theme system */
 :root {
+    --primary-color: rgb(97, 158, 255);
+    --secondary-color: rgb(97, 158, 255);
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #6b7280;
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --bg-code: #374151;
+    --border-color: #4b5563;
+    --success-color: #10b981;
+    --error-color: #f87171;
+    --warning-color: #fbbf24;
+    --info-color: rgb(97, 158, 255);
+    --quote-border: rgb(97, 158, 255);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Light mode variables (applied when data-theme="light") */
+[data-theme="light"] {
     --primary-color: #3776db;
     --secondary-color: #3776db;
     --text-primary: #292929;
@@ -20,7 +42,7 @@
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
-/* Dark mode variables */
+/* Dark mode variables (explicit dark theme) */
 [data-theme="dark"] {
     --primary-color: rgb(97, 158, 255);
     --secondary-color: rgb(97, 158, 255);
