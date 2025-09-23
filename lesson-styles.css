@@ -3,7 +3,7 @@
 :root {
     --primary-color: #1e40af;
     --secondary-color: #3730a3;
-    --text-primary: #ffffff;
+    --text-primary: #1f2937;
     --text-secondary: #4b5563;
     --text-muted: #9ca3af;
     --bg-primary: #ffffff;
@@ -806,5 +806,4 @@ p {
         --border-color: #000000;
         --text-secondary: #000000;
     }
-
 }
