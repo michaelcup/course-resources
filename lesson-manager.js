@@ -1,6 +1,6 @@
 /**
- * Thinkific Multimedia Lesson Manager v2.3
- * Enhanced with proper media + scroll progress tracking and smart content end detection
+ * Thinkific Multimedia Lesson Manager v2.2
+ * Enhanced with better progress tracking and modular UI integration
  */
 
 class LessonManager {
@@ -70,94 +70,34 @@ class LessonManager {
     }
     
     /**
-     * Track content progress - takes maximum of media and scroll progress
+     * Track content progress (reading + media)
      */
     trackContent() {
-        let mediaProgress = 0;
-        let scrollProgress = 0;
+        let contentProgress = 0;
         
-        // Calculate media progress if available
         if (this.hasMedia && this.mediaDuration > 0) {
-            mediaProgress = Math.min(100, Math.round((this.mediaWatched / this.mediaDuration) * 100));
-        }
-        
-        // Calculate scroll progress based on reading content end (not full page)
-        const readingEndElement = this.findReadingEndElement();
-        if (readingEndElement) {
-            const readingEndTop = readingEndElement.offsetTop;
-            const scrolled = window.scrollY;
-            const windowHeight = window.innerHeight;
-            
-            // Calculate progress based on reading content only
-            const scrollableToReadingEnd = Math.max(0, readingEndTop - windowHeight);
-            
-            if (scrollableToReadingEnd > 0) {
-                scrollProgress = Math.min(100, Math.round((scrolled / scrollableToReadingEnd) * 100));
-            } else {
-                // If reading content fits in one screen, consider it complete when scrolled at all
-                scrollProgress = scrolled > 0 ? 100 : 0;
-            }
+            // If there's media, progress is based on media consumption
+            contentProgress = Math.min(100, Math.round((this.mediaWatched / this.mediaDuration) * 100));
         } else {
-            // Fallback to full document if no reading end found
+            // No media, use scroll-based reading progress
             const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrolled = window.scrollY;
-            
-            if (scrollHeight > 0) {
-                scrollProgress = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
-            }
+            contentProgress = scrollHeight > 0 ? Math.min(100, Math.round((scrolled / scrollHeight) * 100)) : 0;
         }
         
-        // Take the maximum of media and scroll progress
-        const newProgress = Math.max(mediaProgress, scrollProgress);
-        
         // Only update if progress increased
-        if (newProgress > this.requirements.contentProgress) {
-            this.requirements.contentProgress = newProgress;
+        if (contentProgress > this.requirements.contentProgress) {
+            this.requirements.contentProgress = contentProgress;
             this.updateProgressDisplay();
             
             if (this.debug) {
-                this.log('Content progress updated:', newProgress + '%', 
-                    `(media: ${mediaProgress}%, scroll: ${scrollProgress}%)`);
+                this.log('Content progress updated:', contentProgress + '%', this.hasMedia ? '(media)' : '(scroll)');
             }
         }
         
         // Throttled save to avoid excessive localStorage writes
         clearTimeout(this.saveTimeout);
         this.saveTimeout = setTimeout(() => this.saveProgress(), 1000);
-    }
-    
-    /**
-     * Find where the reading content ends (before quiz/interactive elements)
-     */
-    findReadingEndElement() {
-        // Look for common content end markers in order of preference
-        const contentEndSelectors = [
-            '.content-section',           // Main content section
-            '.lesson-content',           // Alternative content wrapper
-            '#content',                  // Simple content ID
-            '.quiz-container',           // Quiz starts here, so content ends before
-            '#quizContainer',           // Alternative quiz ID
-            '.interactive-section',      // Any interactive section
-            'main .container'           // Main container fallback
-        ];
-        
-        for (const selector of contentEndSelectors) {
-            const element = document.querySelector(selector);
-            if (element) {
-                // If it's a quiz/interactive element, we want the element BEFORE it
-                if (selector.includes('quiz') || selector.includes('interactive')) {
-                    const previousElement = element.previousElementSibling;
-                    if (previousElement) {
-                        return previousElement;
-                    }
-                } else {
-                    // For content sections, we want the end of that section
-                    return element;
-                }
-            }
-        }
-        
-        return null;
     }
     
     /**
@@ -169,20 +109,25 @@ class LessonManager {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Scroll tracking for all lessons
+        // Scroll tracking for lessons without media
         this.setupScrollTracking();
         
         this.log('Event listeners setup complete');
     }
     
     /**
-     * Set up scroll tracking (works alongside media tracking)
+     * Set up scroll tracking with better reliability
      */
     setupScrollTracking() {
         let scrollTimeout;
         let lastScrollY = 0;
         
         const handleScroll = () => {
+            // Only track if we don't have media or media isn't playing
+            if (this.hasMedia && this.mediaElement && !this.mediaElement.paused) {
+                return;
+            }
+            
             const currentScrollY = window.scrollY;
             
             // Only update if scroll position changed
@@ -216,7 +161,7 @@ class LessonManager {
     }
     
     /**
-     * Update all progress displays
+     * Update all progress displays with enhanced status
      */
     updateProgressDisplay() {
         // Update main progress bar (multiple possible selectors for compatibility)
@@ -230,6 +175,9 @@ class LessonManager {
         
         if (progressBarEl) {
             progressBarEl.style.width = this.requirements.contentProgress + '%';
+            this.log('Updated progress bar:', this.requirements.contentProgress + '%');
+        } else {
+            this.log('Progress bar element not found');
         }
         
         // Update bottom bar with dynamic status
