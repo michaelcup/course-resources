@@ -40,18 +40,42 @@ class LessonManager {
     }
     
     /**
-     * Track scroll progress - simple and reliable
+     * Track scroll progress - simple and reliable, stops at quiz
      */
     trackScrollProgress() {
+        // Find where the content ends (before quiz)
+        const contentEndElement = this.findContentEnd();
+        
+        let scrollableHeight;
+        if (contentEndElement) {
+            // Calculate scrollable area up to content end
+            const contentEndTop = contentEndElement.offsetTop + contentEndElement.offsetHeight;
+            const windowHeight = window.innerHeight;
+            scrollableHeight = Math.max(0, contentEndTop - windowHeight);
+            
+            if (this.debug && scrollableHeight === 0) {
+                this.log('Content fits in viewport, no scrolling needed for 100%');
+            }
+        } else {
+            // Fallback to full document if no content end found
+            const documentHeight = document.documentElement.scrollHeight;
+            const windowHeight = window.innerHeight;
+            scrollableHeight = documentHeight - windowHeight;
+            
+            if (this.debug) {
+                this.log('No content end found, using full document height');
+            }
+        }
+        
         // Calculate current scroll progress
         const scrollTop = window.scrollY;
-        const documentHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        const scrollableHeight = documentHeight - windowHeight;
-        
         let currentScrollProgress = 0;
+        
         if (scrollableHeight > 0) {
             currentScrollProgress = Math.min(100, Math.max(0, (scrollTop / scrollableHeight) * 100));
+        } else {
+            // If content fits in viewport, any scroll gives 100%
+            currentScrollProgress = scrollTop > 10 ? 100 : 0;
         }
         
         // Only update if this is higher than our previous highest
@@ -62,7 +86,7 @@ class LessonManager {
             this.updateProgressDisplay();
             
             if (this.debug) {
-                this.log(`Scroll progress updated: ${this.highestScrollProgress.toFixed(1)}% (scrolled: ${scrollTop}px of ${scrollableHeight}px)`);
+                this.log(`Scroll progress updated: ${this.highestScrollProgress.toFixed(1)}% (scrolled: ${scrollTop}px of ${scrollableHeight}px to content end)`);
             }
             
             // Save progress
@@ -70,6 +94,47 @@ class LessonManager {
         } else if (this.debug) {
             this.log(`Scroll progress unchanged: current ${currentScrollProgress.toFixed(1)}% <= highest ${this.highestScrollProgress.toFixed(1)}%`);
         }
+    }
+    
+    /**
+     * Find where the reading content ends (before quiz/interactive elements)
+     */
+    findContentEnd() {
+        // Look for content end markers in order of preference
+        const selectors = [
+            '.content-section',      // Main content wrapper
+            '.lesson-content',       // Alternative content wrapper
+            '#content',              // Generic content ID
+            '.quiz-container',       // Stop before quiz
+            '#quizContainer',        // Alternative quiz ID
+        ];
+        
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+                // If it's a quiz element, we want the previous sibling (the content before it)
+                if (selector.includes('quiz')) {
+                    const prevElement = element.previousElementSibling;
+                    if (prevElement) {
+                        if (this.debug) {
+                            this.log(`Content end found before ${selector}: ${prevElement.tagName}${prevElement.className ? '.' + prevElement.className : ''}`);
+                        }
+                        return prevElement;
+                    }
+                } else {
+                    // For content sections, use the end of that section
+                    if (this.debug) {
+                        this.log(`Content end found at end of ${selector}: ${element.tagName}${element.className ? '.' + element.className : ''}`);
+                    }
+                    return element;
+                }
+            }
+        }
+        
+        if (this.debug) {
+            this.log('No content end element found, will use full document');
+        }
+        return null;
     }
     
     /**
