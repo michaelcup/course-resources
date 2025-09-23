@@ -1,6 +1,6 @@
 /**
- * Thinkific Multimedia Lesson Manager v2.1
- * Enhanced with media duration tracking and dynamic status indicators
+ * Thinkific Multimedia Lesson Manager v2.2
+ * Enhanced with better progress tracking and modular UI integration
  */
 
 class LessonManager {
@@ -82,11 +82,18 @@ class LessonManager {
             // No media, use scroll-based reading progress
             const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrolled = window.scrollY;
-            contentProgress = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
+            contentProgress = scrollHeight > 0 ? Math.min(100, Math.round((scrolled / scrollHeight) * 100)) : 0;
         }
         
-        this.requirements.contentProgress = Math.max(this.requirements.contentProgress, contentProgress);
-        this.updateProgressDisplay();
+        // Only update if progress increased
+        if (contentProgress > this.requirements.contentProgress) {
+            this.requirements.contentProgress = contentProgress;
+            this.updateProgressDisplay();
+            
+            if (this.debug) {
+                this.log('Content progress updated:', contentProgress + '%', this.hasMedia ? '(media)' : '(scroll)');
+            }
+        }
         
         // Throttled save to avoid excessive localStorage writes
         clearTimeout(this.saveTimeout);
@@ -102,28 +109,89 @@ class LessonManager {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Scroll tracking (for lessons without media)
-        window.addEventListener('scroll', () => {
-            if (!this.hasMedia) {
-                this.trackContent();
-            }
-        });
+        // Scroll tracking for lessons without media
+        this.setupScrollTracking();
         
         this.log('Event listeners setup complete');
+    }
+    
+    /**
+     * Set up scroll tracking with better reliability
+     */
+    setupScrollTracking() {
+        let scrollTimeout;
+        let lastScrollY = 0;
+        
+        const handleScroll = () => {
+            // Only track if we don't have media or media isn't playing
+            if (this.hasMedia && this.mediaElement && !this.mediaElement.paused) {
+                return;
+            }
+            
+            const currentScrollY = window.scrollY;
+            
+            // Only update if scroll position changed
+            if (currentScrollY !== lastScrollY) {
+                lastScrollY = currentScrollY;
+                
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    this.trackContent();
+                }, 100);
+            }
+        };
+        
+        // Use passive listener for better performance
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        
+        // Also track on resize (content height might change)
+        window.addEventListener('resize', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                this.trackContent();
+            }, 250);
+        });
+        
+        // Initial content tracking
+        setTimeout(() => {
+            this.trackContent();
+        }, 500);
+        
+        this.log('Scroll tracking setup complete');
     }
     
     /**
      * Update all progress displays with enhanced status
      */
     updateProgressDisplay() {
-        // Update main progress bar (0-100% content only)
-        const progressBarEl = document.getElementById('progressBar');
+        // Update main progress bar (multiple possible selectors for compatibility)
+        const progressSelectors = ['#progressBar', '.progress-bar-fill', '[data-progress-bar]'];
+        let progressBarEl = null;
+        
+        for (const selector of progressSelectors) {
+            progressBarEl = document.querySelector(selector);
+            if (progressBarEl) break;
+        }
+        
         if (progressBarEl) {
             progressBarEl.style.width = this.requirements.contentProgress + '%';
+            this.log('Updated progress bar:', this.requirements.contentProgress + '%');
+        } else {
+            this.log('Progress bar element not found');
         }
         
         // Update bottom bar with dynamic status
         this.updateBottomBarStatus();
+        
+        // Dispatch custom event for modular UI integration
+        window.dispatchEvent(new CustomEvent('lessonProgressUpdated', {
+            detail: {
+                contentProgress: this.requirements.contentProgress,
+                quizState: this.quizState,
+                hasMedia: this.hasMedia,
+                lessonId: this.lessonId
+            }
+        }));
     }
     
     /**
@@ -298,8 +366,6 @@ class LessonManager {
         this.log('Quiz reset');
     }
     
-    // ... (keeping all other existing methods unchanged)
-    
     /**
      * Get lesson ID from URL parameters or referrer
      */
@@ -340,6 +406,7 @@ class LessonManager {
                 const progress = JSON.parse(saved);
                 this.requirements = { ...this.requirements, ...progress.requirements };
                 this.quizState = progress.quizState || 'not-started';
+                this.mediaWatched = progress.mediaWatched || 0;
                 
                 this.updateProgressDisplay();
                 

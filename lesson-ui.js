@@ -110,17 +110,20 @@ class LessonUI {
             this.setupLessonManagerIntegration();
         }
         
-        // Set up scroll tracking for progress bar
-        this.setupScrollTracking();
+        // Don't set up separate scroll tracking - let LessonManager handle it
+        // this.setupScrollTracking();
         
         this.setupCustomEventListeners();
     }
     
     /**
      * Set up scroll tracking for progress bar updates
+     * NOTE: Currently disabled in favor of LessonManager's built-in tracking
      */
     setupScrollTracking() {
         if (!this.progressBar) return;
+        
+        console.log('Setting up independent scroll tracking (this may conflict with LessonManager)');
         
         let scrollTimeout;
         
@@ -154,7 +157,7 @@ class LessonUI {
                     }
                     
                     if (this.options.debug) {
-                        console.log('Scroll progress updated:', progress + '%');
+                        console.log('Independent scroll progress updated:', progress + '%');
                     }
                 }
             }, 100); // Throttle to every 100ms
@@ -176,6 +179,7 @@ class LessonUI {
             if (window.lessonManager) {
                 this.lessonManager = window.lessonManager;
                 this.bindLessonManagerEvents();
+                this.fixLessonManagerScrollTracking();
             } else {
                 setTimeout(checkForLessonManager, 100);
             }
@@ -187,7 +191,70 @@ class LessonUI {
         window.addEventListener('lessonManagerReady', (e) => {
             this.lessonManager = e.detail.lessonManager;
             this.bindLessonManagerEvents();
+            this.fixLessonManagerScrollTracking();
         });
+    }
+    
+    /**
+     * Fix LessonManager's scroll tracking to work with our modular progress bar
+     */
+    fixLessonManagerScrollTracking() {
+        if (!this.lessonManager) return;
+        
+        // Override LessonManager's updateProgressDisplay to work with our progress bar
+        const originalUpdateProgressDisplay = this.lessonManager.updateProgressDisplay.bind(this.lessonManager);
+        
+        this.lessonManager.updateProgressDisplay = () => {
+            // Update the original progress bar element (if it exists)
+            const originalProgressBar = document.getElementById('progressBar');
+            if (originalProgressBar) {
+                originalProgressBar.style.width = this.lessonManager.requirements.contentProgress + '%';
+            }
+            
+            // Update our modular progress bar
+            if (this.progressBar) {
+                this.progressBar.updateProgress(this.lessonManager.requirements.contentProgress);
+            }
+            
+            // Call original method for other UI updates
+            originalUpdateProgressDisplay();
+            
+            // Update our bottom bar
+            this.updateFromLessonManager();
+        };
+        
+        // Ensure scroll tracking is working
+        this.ensureScrollTracking();
+    }
+    
+    /**
+     * Ensure scroll tracking is properly set up
+     */
+    ensureScrollTracking() {
+        if (!this.lessonManager) return;
+        
+        // Force re-setup of scroll tracking
+        const originalSetupEventListeners = this.lessonManager.setupEventListeners.bind(this.lessonManager);
+        
+        // Add additional scroll listener to ensure it works
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                if (!this.lessonManager.hasMedia) {
+                    this.lessonManager.trackContent();
+                    
+                    if (this.options.debug) {
+                        console.log('Manual scroll tracking triggered, progress:', this.lessonManager.requirements.contentProgress + '%');
+                    }
+                }
+            }, 50);
+        }, { passive: true });
+        
+        // Initial content tracking
+        setTimeout(() => {
+            this.lessonManager.trackContent();
+        }, 500);
     }
     
     /**
