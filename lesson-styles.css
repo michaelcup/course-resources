@@ -112,6 +112,7 @@ body {
     box-shadow: var(--shadow-sm);
     transition: background-color 300ms ease, border-color 300ms ease;
     cursor: pointer;
+    user-select: none;
 }
 
 .toggle-checkbox:checked ~ .toggle-slot {
@@ -261,6 +262,12 @@ body {
     font-size: 0.75rem;
     color: white;
     font-weight: 600;
+}
+
+.requirement-icon .iconify {
+    width: 12px;
+    height: 12px;
+    color: white;
 }
 
 .requirement-icon.complete {
@@ -635,6 +642,12 @@ p {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.quiz-title .iconify {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: var(--primary-color);
 }
 
 .question-block {

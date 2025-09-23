@@ -27,14 +27,36 @@ class ThemeToggle {
             });
         }
         
-        // Handle checkbox change
+        // Wait for DOM to be ready before setting up checkbox listener
+        this.setupCheckboxListener();
+    }
+    
+    setupCheckboxListener() {
         const checkbox = document.getElementById('themeToggleCheckbox');
+        const toggleSlot = document.querySelector('.toggle-slot');
+        
         if (checkbox) {
             checkbox.addEventListener('change', (e) => {
                 const newTheme = e.target.checked ? 'dark' : 'light';
                 this.applyTheme(newTheme);
                 localStorage.setItem('theme', newTheme);
             });
+            
+            // Also add click listener to the toggle slot as backup
+            if (toggleSlot) {
+                toggleSlot.addEventListener('click', (e) => {
+                    // Prevent double triggering if checkbox was clicked directly
+                    if (e.target === checkbox) return;
+                    
+                    checkbox.checked = !checkbox.checked;
+                    const newTheme = checkbox.checked ? 'dark' : 'light';
+                    this.applyTheme(newTheme);
+                    localStorage.setItem('theme', newTheme);
+                });
+            }
+        } else {
+            // If checkbox not found, try again after a short delay
+            setTimeout(() => this.setupCheckboxListener(), 100);
         }
     }
     
