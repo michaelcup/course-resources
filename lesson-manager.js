@@ -1,37 +1,27 @@
-/*
-Multimedia Lesson Manager v2.0
+/**
+ * Thinkific Multimedia Lesson Manager v2.1
+ * Enhanced with media duration tracking and dynamic status indicators
  */
 
 class LessonManager {
     constructor(options = {}) {
         this.requirements = {
-            reading: 0,
+            contentProgress: 0,  // 0-100% based on reading/media consumption
             quizPassed: false
         };
         
         this.selectedAnswers = {};
         this.lessonId = options.lessonId || this.getLessonId();
-        this.quizState = 'active'; // 'active', 'review', 'completed'
+        this.quizState = 'not-started'; // 'not-started', 'in-progress', 'failed', 'passed'
         this.debug = options.debug || false;
         
+        // Media tracking
+        this.mediaElement = null;
+        this.mediaDuration = 0;
+        this.mediaWatched = 0;
+        this.hasMedia = false;
+        
         this.init();
-    }
-    
-    /**
-     * Get lesson ID from URL parameters or referrer
-     */
-    getLessonId() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const paramLessonId = urlParams.get('lesson_id');
-        if (paramLessonId) return paramLessonId;
-        
-        const parentUrl = document.referrer;
-        const match = parentUrl.match(/lessons\/(\d+)/);
-        if (match) return match[1];
-        
-        // Fallback to page title or default
-        const title = document.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-        return title || 'default-lesson';
     }
     
     /**
@@ -41,11 +31,66 @@ class LessonManager {
         this.log('Initializing lesson manager for:', this.lessonId);
         
         this.setupEventListeners();
+        this.setupMediaTracking();
         this.loadProgress();
         this.declareLessonRequirements();
-        this.trackScroll();
+        this.trackContent();
         
         this.log('Lesson manager initialized successfully');
+    }
+    
+    /**
+     * Set up media tracking for video/audio elements
+     */
+    setupMediaTracking() {
+        // Look for video or audio elements
+        this.mediaElement = document.querySelector('video, audio');
+        
+        if (this.mediaElement) {
+            this.hasMedia = true;
+            this.log('Media element found:', this.mediaElement.tagName);
+            
+            this.mediaElement.addEventListener('loadedmetadata', () => {
+                this.mediaDuration = this.mediaElement.duration;
+                this.log('Media duration:', this.mediaDuration);
+            });
+            
+            this.mediaElement.addEventListener('timeupdate', () => {
+                if (this.mediaDuration > 0) {
+                    this.mediaWatched = Math.max(this.mediaWatched, this.mediaElement.currentTime);
+                    this.trackContent();
+                }
+            });
+            
+            this.mediaElement.addEventListener('ended', () => {
+                this.mediaWatched = this.mediaDuration;
+                this.trackContent();
+            });
+        }
+    }
+    
+    /**
+     * Track content progress (reading + media)
+     */
+    trackContent() {
+        let contentProgress = 0;
+        
+        if (this.hasMedia && this.mediaDuration > 0) {
+            // If there's media, progress is based on media consumption
+            contentProgress = Math.min(100, Math.round((this.mediaWatched / this.mediaDuration) * 100));
+        } else {
+            // No media, use scroll-based reading progress
+            const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = window.scrollY;
+            contentProgress = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
+        }
+        
+        this.requirements.contentProgress = Math.max(this.requirements.contentProgress, contentProgress);
+        this.updateProgressDisplay();
+        
+        // Throttled save to avoid excessive localStorage writes
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => this.saveProgress(), 1000);
     }
     
     /**
@@ -57,15 +102,10 @@ class LessonManager {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Scroll tracking
-        window.addEventListener('scroll', () => this.trackScroll());
-        
-        // Visibility change (for pause/resume tracking)
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.log('Page hidden - pausing tracking');
-            } else {
-                this.log('Page visible - resuming tracking');
+        // Scroll tracking (for lessons without media)
+        window.addEventListener('scroll', () => {
+            if (!this.hasMedia) {
+                this.trackContent();
             }
         });
         
@@ -73,149 +113,65 @@ class LessonManager {
     }
     
     /**
-     * Declare lesson requirements to parent window (Thinkific)
-     */
-    declareLessonRequirements() {
-        if (window.parent !== window) {
-            window.parent.postMessage({
-                type: 'lesson_requirements',
-                lesson: this.lessonId,
-                requires_completion: true,
-                requirements: {
-                    quiz: true,
-                    reading: false
-                }
-            }, '*');
-            
-            this.log('Declared lesson requirements to parent');
-        }
-    }
-    
-    /**
-     * Load saved progress from localStorage
-     */
-    loadProgress() {
-        try {
-            const saved = localStorage.getItem(`lesson_${this.lessonId}_progress`);
-            if (saved) {
-                const progress = JSON.parse(saved);
-                this.requirements = { ...this.requirements, ...progress.requirements };
-                
-                // Update UI
-                this.updateProgressDisplay();
-                
-                // Restore quiz state if completed
-                if (this.requirements.quizPassed) {
-                    this.setQuizState('completed');
-                }
-                
-                this.log('Progress loaded:', this.requirements);
-            }
-        } catch (error) {
-            console.error('Error loading progress:', error);
-        }
-    }
-    
-    /**
-     * Save progress to localStorage
-     */
-    saveProgress() {
-        try {
-            const progress = {
-                requirements: this.requirements,
-                timestamp: new Date().toISOString(),
-                quizState: this.quizState,
-                selectedAnswers: this.selectedAnswers
-            };
-            localStorage.setItem(`lesson_${this.lessonId}_progress`, JSON.stringify(progress));
-            this.log('Progress saved');
-        } catch (error) {
-            console.error('Error saving progress:', error);
-        }
-    }
-    
-    /**
-     * Track reading progress based on scroll position
-     */
-    trackScroll() {
-        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const scrolled = window.scrollY;
-        const percent = Math.min(100, Math.round((scrolled / scrollHeight) * 100));
-        
-        this.requirements.reading = Math.max(this.requirements.reading, percent);
-        this.updateProgressDisplay();
-        
-        // Throttled save to avoid excessive localStorage writes
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(() => this.saveProgress(), 1000);
-    }
-    
-    /**
-     * Update all progress displays
+     * Update all progress displays with enhanced status
      */
     updateProgressDisplay() {
-        // Update reading status
-        const readStatusEl = document.getElementById('readStatus');
-        if (readStatusEl) {
-            readStatusEl.textContent = this.requirements.reading + '%';
-            if (this.requirements.reading >= 90) {
-                readStatusEl.classList.add('stat-complete');
-            }
-        }
-        
-        // Update quiz status
-        const quizStatusEl = document.getElementById('quizStatus');
-        if (quizStatusEl) {
-            if (this.requirements.quizPassed) {
-                quizStatusEl.textContent = 'Passed';
-                quizStatusEl.classList.add('stat-complete');
-            } else if (this.quizState === 'review') {
-                quizStatusEl.textContent = 'Reviewing';
-            } else {
-                quizStatusEl.textContent = 'Not Started';
-            }
-        }
-        
-        // Update progress bar
-        let progress = 0;
-        progress += (this.requirements.reading / 100) * 50; // Reading is 50%
-        progress += this.requirements.quizPassed ? 50 : 0;  // Quiz is 50%
-        
+        // Update main progress bar (0-100% content only)
         const progressBarEl = document.getElementById('progressBar');
         if (progressBarEl) {
-            progressBarEl.style.width = progress + '%';
+            progressBarEl.style.width = this.requirements.contentProgress + '%';
         }
         
-        // Update bottom bar icons
-        this.updateBottomBarIcons();
+        // Update bottom bar with dynamic status
+        this.updateBottomBarStatus();
     }
     
     /**
-     * Update completion requirement icons in bottom bar
+     * Update bottom bar with dynamic status indicators
      */
-    updateBottomBarIcons() {
+    updateBottomBarStatus() {
         const readingIcon = document.getElementById('readingIcon');
+        const readingText = readingIcon?.nextElementSibling;
         const quizIcon = document.getElementById('quizIcon');
+        const quizText = quizIcon?.nextElementSibling;
         
-        // Update reading icon
-        if (readingIcon) {
-            if (this.requirements.reading >= 90) {
+        // Update reading/content status
+        if (readingIcon && readingText) {
+            if (this.requirements.contentProgress >= 90) {
                 readingIcon.classList.remove('incomplete');
                 readingIcon.classList.add('complete');
+                readingText.textContent = this.hasMedia ? 'Media Complete' : 'Reading Complete';
             } else {
                 readingIcon.classList.remove('complete');
                 readingIcon.classList.add('incomplete');
+                readingText.textContent = this.hasMedia ? 'Media Incomplete' : 'Reading Incomplete';
             }
         }
         
-        // Update quiz icon
-        if (quizIcon) {
-            if (this.requirements.quizPassed) {
-                quizIcon.classList.remove('incomplete');
-                quizIcon.classList.add('complete');
-            } else {
-                quizIcon.classList.remove('complete');
-                quizIcon.classList.add('incomplete');
+        // Update quiz status with enhanced states
+        if (quizIcon && quizText) {
+            quizIcon.className = 'requirement-icon'; // Reset classes
+            
+            switch (this.quizState) {
+                case 'not-started':
+                    quizIcon.classList.add('incomplete');
+                    quizText.textContent = 'Quiz Not Started';
+                    break;
+                    
+                case 'in-progress':
+                    quizIcon.classList.add('in-progress');
+                    quizText.textContent = 'Quiz In Progress';
+                    break;
+                    
+                case 'failed':
+                    quizIcon.classList.add('failed');
+                    quizText.textContent = 'Quiz Failed - Try Again';
+                    break;
+                    
+                case 'passed':
+                    quizIcon.classList.add('complete');
+                    quizText.textContent = 'Quiz Passed';
+                    break;
             }
         }
     }
@@ -224,7 +180,13 @@ class LessonManager {
      * Handle answer option clicks
      */
     handleAnswerClick(event) {
-        if (this.quizState !== 'active') return;
+        if (this.quizState === 'passed') return; // Don't allow changes after passing
+        
+        // Set quiz to in-progress on first interaction
+        if (this.quizState === 'not-started') {
+            this.quizState = 'in-progress';
+            this.updateProgressDisplay();
+        }
         
         const option = event.target;
         const question = option.closest('.question-block');
@@ -242,42 +204,6 @@ class LessonManager {
         this.selectedAnswers[questionIndex] = option.getAttribute('data-answer');
         
         this.log('Answer selected:', questionIndex, this.selectedAnswers[questionIndex]);
-    }
-    
-    /**
-     * Set quiz state and update UI accordingly
-     */
-    setQuizState(state) {
-        this.quizState = state;
-        const container = document.getElementById('quizContainer');
-        const resetBtn = document.getElementById('quizResetBtn');
-        const reviewInstructions = document.getElementById('reviewInstructions');
-        
-        if (!container) return;
-        
-        switch (state) {
-            case 'active':
-                container.classList.remove('review-mode');
-                if (resetBtn) resetBtn.classList.remove('show');
-                if (reviewInstructions) reviewInstructions.classList.remove('show');
-                break;
-                
-            case 'review':
-                container.classList.add('review-mode');
-                if (resetBtn) resetBtn.classList.add('show');
-                if (reviewInstructions) reviewInstructions.classList.add('show');
-                break;
-                
-            case 'completed':
-                container.classList.add('review-mode');
-                if (resetBtn) resetBtn.classList.add('show');
-                if (reviewInstructions) reviewInstructions.classList.add('show');
-                const completionSection = document.getElementById('completionSection');
-                if (completionSection) completionSection.classList.add('show');
-                break;
-        }
-        
-        this.log('Quiz state changed to:', state);
     }
     
     /**
@@ -309,23 +235,29 @@ class LessonManager {
             }
         });
         
-        // Show feedback and update state
+        // Update quiz state and show feedback
         const feedback = document.getElementById('quizFeedback');
         const allCorrect = correctCount === questions.length;
         
-        if (feedback) {
-            if (allCorrect) {
+        if (allCorrect) {
+            this.quizState = 'passed';
+            this.requirements.quizPassed = true;
+            this.setQuizState('completed');
+            this.notifyCompletion();
+            
+            if (feedback) {
                 feedback.className = 'quiz-feedback success show';
                 feedback.textContent = `🎉 Perfect! All ${correctCount} answers correct. Review your answers above or retake the quiz.`;
-                this.requirements.quizPassed = true;
-                this.setQuizState('completed');
-                this.notifyCompletion();
-            } else {
+            }
+        } else {
+            this.quizState = 'failed';
+            this.requirements.quizPassed = false;
+            this.setQuizState('review');
+            this.notifyReset();
+            
+            if (feedback) {
                 feedback.className = 'quiz-feedback error show';
                 feedback.textContent = `You got ${correctCount} out of ${questions.length} correct. Review the answers above and click "Reset Quiz" to try again.`;
-                this.requirements.quizPassed = false;
-                this.setQuizState('review');
-                this.notifyReset();
             }
         }
         
@@ -353,6 +285,7 @@ class LessonManager {
         // Reset data
         this.selectedAnswers = {};
         this.requirements.quizPassed = false;
+        this.quizState = 'not-started';
         this.setQuizState('active');
         
         // Update display
@@ -365,9 +298,110 @@ class LessonManager {
         this.log('Quiz reset');
     }
     
+    // ... (keeping all other existing methods unchanged)
+    
     /**
-     * Notify parent window of lesson completion
+     * Get lesson ID from URL parameters or referrer
      */
+    getLessonId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramLessonId = urlParams.get('lesson_id');
+        if (paramLessonId) return paramLessonId;
+        
+        const parentUrl = document.referrer;
+        const match = parentUrl.match(/lessons\/(\d+)/);
+        if (match) return match[1];
+        
+        // Fallback to page title or default
+        const title = document.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return title || 'default-lesson';
+    }
+    
+    declareLessonRequirements() {
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: 'lesson_requirements',
+                lesson: this.lessonId,
+                requires_completion: true,
+                requirements: {
+                    quiz: true,
+                    content: true
+                }
+            }, '*');
+            
+            this.log('Declared lesson requirements to parent');
+        }
+    }
+    
+    loadProgress() {
+        try {
+            const saved = localStorage.getItem(`lesson_${this.lessonId}_progress`);
+            if (saved) {
+                const progress = JSON.parse(saved);
+                this.requirements = { ...this.requirements, ...progress.requirements };
+                this.quizState = progress.quizState || 'not-started';
+                
+                this.updateProgressDisplay();
+                
+                if (this.requirements.quizPassed) {
+                    this.setQuizState('completed');
+                }
+                
+                this.log('Progress loaded:', this.requirements);
+            }
+        } catch (error) {
+            console.error('Error loading progress:', error);
+        }
+    }
+    
+    saveProgress() {
+        try {
+            const progress = {
+                requirements: this.requirements,
+                quizState: this.quizState,
+                timestamp: new Date().toISOString(),
+                selectedAnswers: this.selectedAnswers,
+                mediaWatched: this.mediaWatched
+            };
+            localStorage.setItem(`lesson_${this.lessonId}_progress`, JSON.stringify(progress));
+            this.log('Progress saved');
+        } catch (error) {
+            console.error('Error saving progress:', error);
+        }
+    }
+    
+    setQuizState(state) {
+        const container = document.getElementById('quizContainer');
+        const resetBtn = document.getElementById('quizResetBtn');
+        const reviewInstructions = document.getElementById('reviewInstructions');
+        
+        if (!container) return;
+        
+        switch (state) {
+            case 'active':
+                container.classList.remove('review-mode');
+                if (resetBtn) resetBtn.classList.remove('show');
+                if (reviewInstructions) reviewInstructions.classList.remove('show');
+                break;
+                
+            case 'review':
+                container.classList.add('review-mode');
+                if (resetBtn) resetBtn.classList.add('show');
+                if (reviewInstructions) reviewInstructions.classList.add('show');
+                break;
+                
+            case 'completed':
+                container.classList.add('review-mode');
+                if (resetBtn) resetBtn.classList.add('show');
+                if (reviewInstructions) reviewInstructions.classList.add('show');
+                const completionSection = document.getElementById('completionSection');
+                if (completionSection) completionSection.classList.add('show');
+                break;
+        }
+        
+        this.log('Quiz display state changed to:', state);
+    }
+    
     notifyCompletion() {
         if (window.parent !== window) {
             window.parent.postMessage({
@@ -381,9 +415,6 @@ class LessonManager {
         }
     }
     
-    /**
-     * Notify parent window of quiz reset
-     */
     notifyReset() {
         if (window.parent !== window) {
             window.parent.postMessage({
@@ -396,24 +427,21 @@ class LessonManager {
         }
     }
     
-    /**
-     * Debug logging
-     */
     log(...args) {
         if (this.debug || window.location.hostname === 'localhost') {
             console.log('[LessonManager]', ...args);
         }
     }
     
-    /**
-     * Get lesson analytics data
-     */
     getAnalytics() {
         return {
             lessonId: this.lessonId,
-            readingProgress: this.requirements.reading,
+            contentProgress: this.requirements.contentProgress,
             quizPassed: this.requirements.quizPassed,
             quizState: this.quizState,
+            hasMedia: this.hasMedia,
+            mediaWatched: this.mediaWatched,
+            mediaDuration: this.mediaDuration,
             timestamp: new Date().toISOString()
         };
     }
