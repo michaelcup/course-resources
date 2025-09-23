@@ -88,34 +88,100 @@ body {
     align-items: center;
 }
 
-/* Dark mode toggle */
+/* Enhanced Sun/Moon Theme Toggle */
 .theme-toggle {
-    background: var(--bg-secondary);
-    border: 2px solid var(--border-color);
-    border-radius: 20px;
-    padding: 0.25rem;
+    position: relative;
+    display: inline-block;
+}
+
+.toggle-checkbox {
+    position: absolute;
+    opacity: 0;
     cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
+    height: 0;
+    width: 0;
 }
 
-.theme-toggle:hover {
-    border-color: var(--primary-color);
+.toggle-slot {
+    position: relative;
+    height: 2.5em;
+    width: 5em;
+    border: 2px solid var(--border-color);
+    border-radius: 2.5em;
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-sm);
+    transition: background-color 300ms ease, border-color 300ms ease;
+    cursor: pointer;
 }
 
-.theme-toggle-icon {
-    width: 16px;
-    height: 16px;
-    transition: transform 0.3s ease;
+.toggle-checkbox:checked ~ .toggle-slot {
+    background-color: var(--bg-code);
+    border-color: var(--border-color);
 }
 
-.theme-toggle-icon.active {
-    transform: scale(1.2);
-    color: var(--primary-color);
+.toggle-button {
+    position: absolute;
+    height: 1.6em;
+    width: 1.6em;
+    border-radius: 50%;
+    background-color: #ffeccf;
+    box-shadow: inset 0px 0px 0px 0.2em #ffbb52, var(--shadow-sm);
+    transform: translate(0.45em, 0.45em);
+    transition: background-color 300ms ease, box-shadow 300ms ease, transform 400ms cubic-bezier(0.26, 2, 0.46, 0.71);
+}
+
+.toggle-checkbox:checked ~ .toggle-slot .toggle-button {
+    background-color: #485367;
+    box-shadow: inset 0px 0px 0px 0.2em #e2e8f0, var(--shadow-sm);
+    transform: translate(2.9em, 0.45em);
+}
+
+.sun-icon {
+    position: absolute;
+    height: 1.2em;
+    width: 1.2em;
+    color: #ffbb52;
+    font-size: 1.2em;
+}
+
+.sun-icon-wrapper {
+    position: absolute;
+    height: 1.2em;
+    width: 1.2em;
+    opacity: 1;
+    transform: translate(0.65em, 0.65em) rotate(15deg);
+    transform-origin: 50% 50%;
+    transition: opacity 200ms ease, transform 400ms cubic-bezier(0.26, 2, 0.46, 0.71);
+    pointer-events: none;
+}
+
+.toggle-checkbox:checked ~ .toggle-slot .sun-icon-wrapper {
+    opacity: 0;
+    transform: translate(1em, 0.65em) rotate(0deg);
+}
+
+.moon-icon {
+    position: absolute;
+    height: 1.2em;
+    width: 1.2em;
+    color: #e2e8f0;
+    font-size: 1.2em;
+}
+
+.moon-icon-wrapper {
+    position: absolute;
+    height: 1.2em;
+    width: 1.2em;
+    opacity: 0;
+    transform: translate(3.1em, 0.65em) rotate(0deg);
+    transform-origin: 50% 50%;
+    transition: opacity 200ms ease, transform 400ms cubic-bezier(0.26, 2.5, 0.46, 0.71);
+    pointer-events: none;
+}
+
+.toggle-checkbox:checked ~ .toggle-slot .moon-icon-wrapper {
+    opacity: 1;
+    transform: translate(3.2em, 0.65em) rotate(-15deg);
 }
 
 .progress-stats {
@@ -787,6 +853,38 @@ p {
         width: 1.5rem;
         height: 1.5rem;
         font-size: 0.75rem;
+    }
+
+    /* Smaller toggle on mobile */
+    .toggle-slot {
+        height: 2.2em;
+        width: 4.4em;
+    }
+
+    .toggle-button {
+        height: 1.4em;
+        width: 1.4em;
+        transform: translate(0.4em, 0.4em);
+    }
+
+    .toggle-checkbox:checked ~ .toggle-slot .toggle-button {
+        transform: translate(2.6em, 0.4em);
+    }
+
+    .sun-icon-wrapper {
+        transform: translate(0.5em, 0.5em) rotate(15deg);
+    }
+
+    .toggle-checkbox:checked ~ .toggle-slot .sun-icon-wrapper {
+        transform: translate(0.8em, 0.5em) rotate(0deg);
+    }
+
+    .moon-icon-wrapper {
+        transform: translate(2.7em, 0.5em) rotate(0deg);
+    }
+
+    .toggle-checkbox:checked ~ .toggle-slot .moon-icon-wrapper {
+        transform: translate(2.8em, 0.5em) rotate(-15deg);
     }
 }
 

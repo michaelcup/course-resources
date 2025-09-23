@@ -1,7 +1,7 @@
 /**
  * Theme Toggle for Thinkific Lessons
- * Provides dark/light mode functionality across all lessons
- * Version 1.0
+ * Provides dark/light mode functionality with sun/moon toggle
+ * Version 2.0
  */
 
 class ThemeToggle {
@@ -26,6 +26,16 @@ class ThemeToggle {
                 }
             });
         }
+        
+        // Handle checkbox change
+        const checkbox = document.getElementById('themeToggleCheckbox');
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                const newTheme = e.target.checked ? 'dark' : 'light';
+                this.applyTheme(newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
+        }
     }
     
     initTheme() {
@@ -36,7 +46,7 @@ class ThemeToggle {
         const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
         
         this.applyTheme(theme);
-        this.updateToggleButton(theme);
+        this.updateToggleState(theme);
     }
     
     toggleTheme() {
@@ -44,7 +54,7 @@ class ThemeToggle {
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         
         this.applyTheme(newTheme);
-        this.updateToggleButton(newTheme);
+        this.updateToggleState(newTheme);
         
         // Save preference
         localStorage.setItem('theme', newTheme);
@@ -59,21 +69,13 @@ class ThemeToggle {
         }));
     }
     
-    updateToggleButton(theme) {
-        const themeIcon = document.getElementById('themeIcon');
-        const themeText = document.getElementById('themeText');
+    updateToggleState(theme) {
+        const checkbox = document.getElementById('themeToggleCheckbox');
         
-        if (!themeIcon || !themeText) return;
+        if (!checkbox) return;
         
-        if (theme === 'dark') {
-            themeIcon.textContent = '☀️';
-            themeText.textContent = 'Light';
-            themeIcon.classList.add('active');
-        } else {
-            themeIcon.textContent = '🌙';
-            themeText.textContent = 'Dark';
-            themeIcon.classList.remove('active');
-        }
+        // Set checkbox state without triggering change event
+        checkbox.checked = theme === 'dark';
     }
     
     getCurrentTheme() {
@@ -93,7 +95,7 @@ if (document.readyState === 'loading') {
     themeToggle = new ThemeToggle();
 }
 
-// Global function for onclick handler
+// Global function for onclick handler (kept for backward compatibility)
 function toggleTheme() {
     if (themeToggle) {
         themeToggle.toggleTheme();
