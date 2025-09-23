@@ -591,12 +591,12 @@ p {
 }
 
 .numbered-list li {
-    display: flex;
-    align-items: flex-start;
+    display: block;
     margin-bottom: 1rem;
     position: relative;
     padding-left: 2.5rem;
     list-style: none;
+    line-height: 1.6;
 }
 
 .numbered-list li:before {
@@ -615,6 +615,30 @@ p {
     justify-content: center;
     font-weight: 600;
     font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+/* Ensure proper spacing around strong elements */
+.numbered-list strong,
+.technique-card strong,
+.content-section strong {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+}
+
+/* Fix spacing issues around inline elements */
+.numbered-list li,
+.technique-card p,
+.content-section p {
+    word-spacing: normal;
+    letter-spacing: normal;
+}
+
+/* Ensure proper spacing in text content */
+p, li {
+    word-spacing: normal;
 }
 
 /* Quiz Reset Button - positioned in quiz header */
