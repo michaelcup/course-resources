@@ -15,6 +15,13 @@ class LessonManager {
         this.quizState = 'not-started';
         this.debug = options.debug || false;
         
+        // Quiz configuration
+        this.quizConfig = {
+            passingScore: options.passingScore || 100, // Percentage needed to pass (default 100%)
+            showCelebration: options.showCelebration !== false, // Whether to show celebration animation
+            ...options.quizConfig
+        };
+        
         // Simple scroll tracking
         this.highestScrollProgress = 0;
         
@@ -302,9 +309,10 @@ class LessonManager {
         });
         
         const feedback = document.getElementById('quizFeedback');
-        const allCorrect = correctCount === questions.length;
+        const scorePercentage = Math.round((correctCount / questions.length) * 100);
+        const passed = scorePercentage >= this.quizConfig.passingScore;
         
-        if (allCorrect) {
+        if (passed) {
             this.quizState = 'passed';
             this.requirements.quizPassed = true;
             this.setQuizState('completed');
@@ -312,7 +320,16 @@ class LessonManager {
             
             if (feedback) {
                 feedback.className = 'quiz-feedback success show';
-                feedback.textContent = `🎉 Perfect! All ${correctCount} answers correct.`;
+                if (scorePercentage === 100) {
+                    feedback.textContent = `🎉 Perfect! All ${correctCount} answers correct.`;
+                } else {
+                    feedback.textContent = `🎉 Great job! You scored ${scorePercentage}% (${correctCount}/${questions.length} correct).`;
+                }
+            }
+            
+            // Show celebration animation
+            if (this.quizConfig.showCelebration) {
+                this.showCelebration(scorePercentage);
             }
         } else {
             this.quizState = 'failed';
@@ -322,14 +339,20 @@ class LessonManager {
             
             if (feedback) {
                 feedback.className = 'quiz-feedback error show';
-                feedback.textContent = `You got ${correctCount} out of ${questions.length} correct. Try again!`;
+                feedback.textContent = `You scored ${scorePercentage}% (${correctCount}/${questions.length} correct). You need ${this.quizConfig.passingScore}% to pass. Try again!`;
             }
         }
         
         this.updateProgressDisplay();
         this.saveProgress();
         
-        this.log('Quiz checked:', { correctCount, total: questions.length, passed: allCorrect });
+        this.log('Quiz checked:', { 
+            correctCount, 
+            total: questions.length, 
+            scorePercentage, 
+            passingScore: this.quizConfig.passingScore,
+            passed 
+        });
     }
     
     /**
@@ -488,6 +511,59 @@ class LessonManager {
         }
     }
     
+    /**
+     * Show celebration animation when quiz is passed
+     */
+    showCelebration(score = 100) {
+        // Create celebration overlay if it doesn't exist
+        let overlay = document.getElementById('celebrationOverlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'celebrationOverlay';
+            overlay.className = 'celebration-overlay';
+            
+            const messages = [
+                { icon: '🎉', title: 'Outstanding!', message: 'You\'ve mastered this lesson!' },
+                { icon: '⭐', title: 'Excellent Work!', message: 'Your knowledge is growing stronger!' },
+                { icon: '🚀', title: 'Amazing Progress!', message: 'You\'re on fire today!' },
+                { icon: '💎', title: 'Brilliant!', message: 'You\'ve earned your mastery!' },
+                { icon: '🏆', title: 'Champion!', message: 'Another lesson conquered!' }
+            ];
+            
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            
+            overlay.innerHTML = `
+                <div class="celebration-content">
+                    <div class="celebration-icon">${randomMessage.icon}</div>
+                    <div class="celebration-title">${randomMessage.title}</div>
+                    <div class="celebration-message">${randomMessage.message}</div>
+                    <div class="celebration-score">Score: ${score}%</div>
+                </div>
+            `;
+            
+            // Add confetti
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'celebration-confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                overlay.appendChild(confetti);
+            }
+            
+            document.body.appendChild(overlay);
+        }
+        
+        // Show the celebration
+        overlay.classList.add('show');
+        
+        // Hide after 3 seconds
+        setTimeout(() => {
+            overlay.classList.remove('show');
+        }, 3000);
+        
+        this.log('Celebration shown for score:', score + '%');
+    }
+    
     getAnalytics() {
         return {
             lessonId: this.lessonId,
@@ -495,6 +571,7 @@ class LessonManager {
             highestScrollProgress: this.highestScrollProgress,
             quizPassed: this.requirements.quizPassed,
             quizState: this.quizState,
+            quizConfig: this.quizConfig,
             timestamp: new Date().toISOString()
         };
     }

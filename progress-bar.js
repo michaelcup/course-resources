@@ -1,6 +1,6 @@
 /**
  * Progress Bar Component for Thinkific Lessons
- * Provides reusable top progress bar with theme toggle
+ * Provides reusable top progress bar with theme toggle and zoom controls
  * Version 1.0
  */
 
@@ -9,6 +9,7 @@ class ProgressBar {
         this.options = {
             title: options.title || 'Lesson Progress',
             showThemeToggle: options.showThemeToggle !== false,
+            showZoomControls: options.showZoomControls !== false,
             showStats: options.showStats !== false,
             containerId: options.containerId || null,
             ...options
@@ -16,6 +17,10 @@ class ProgressBar {
         
         this.element = null;
         this.progressBarFill = null;
+        this.currentZoom = 100;
+        this.minZoom = 75;
+        this.maxZoom = 150;
+        this.zoomStep = 10;
     }
     
     /**
@@ -27,13 +32,29 @@ class ProgressBar {
                 <div class="progress-content">
                     <div class="progress-label">
                         <span>${this.options.title}</span>
-                        ${this.options.showThemeToggle ? this.generateThemeToggle() : ''}
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            ${this.options.showZoomControls ? this.generateZoomControls() : ''}
+                            ${this.options.showThemeToggle ? this.generateThemeToggle() : ''}
+                        </div>
                     </div>
                     <div class="progress-bar-track">
                         <div class="progress-bar-fill" id="progressBar"></div>
                     </div>
                     ${this.options.showStats ? this.generateStats() : ''}
                 </div>
+            </div>
+        `;
+    }
+    
+    /**
+     * Generate zoom controls HTML
+     */
+    generateZoomControls() {
+        return `
+            <div class="progress-zoom-controls">
+                <button class="zoom-button" id="zoomOut" title="Zoom Out (Ctrl + -)">-</button>
+                <div class="zoom-display" id="zoomDisplay">100%</div>
+                <button class="zoom-button" id="zoomIn" title="Zoom In (Ctrl + +)">+</button>
             </div>
         `;
     }
@@ -92,6 +113,11 @@ class ProgressBar {
         // Set up any additional event listeners
         this.setupEventListeners();
         
+        // Load saved zoom level
+        if (this.options.showZoomControls) {
+            setTimeout(() => this.loadSavedZoom(), 100);
+        }
+        
         return this;
     }
     
@@ -124,8 +150,124 @@ class ProgressBar {
      * Set up additional event listeners
      */
     setupEventListeners() {
-        // Custom event listeners can be added here
-        // Theme toggle is handled by theme-toggle.js
+        // Set up zoom controls
+        if (this.options.showZoomControls) {
+            this.setupZoomControls();
+        }
+    }
+    
+    /**
+     * Set up zoom control functionality
+     */
+    setupZoomControls() {
+        const zoomInBtn = document.getElementById('zoomIn');
+        const zoomOutBtn = document.getElementById('zoomOut');
+        const zoomDisplay = document.getElementById('zoomDisplay');
+        
+        if (zoomInBtn && zoomOutBtn && zoomDisplay) {
+            // Button click handlers
+            zoomInBtn.addEventListener('click', () => this.zoomIn());
+            zoomOutBtn.addEventListener('click', () => this.zoomOut());
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === '=' || e.key === '+') {
+                        e.preventDefault();
+                        this.zoomIn();
+                    } else if (e.key === '-') {
+                        e.preventDefault();
+                        this.zoomOut();
+                    } else if (e.key === '0') {
+                        e.preventDefault();
+                        this.resetZoom();
+                    }
+                }
+            });
+            
+            // Initialize zoom level
+            this.updateZoomDisplay();
+        }
+    }
+    
+    /**
+     * Zoom in
+     */
+    zoomIn() {
+        if (this.currentZoom < this.maxZoom) {
+            this.currentZoom += this.zoomStep;
+            this.applyZoom();
+        }
+    }
+    
+    /**
+     * Zoom out
+     */
+    zoomOut() {
+        if (this.currentZoom > this.minZoom) {
+            this.currentZoom -= this.zoomStep;
+            this.applyZoom();
+        }
+    }
+    
+    /**
+     * Reset zoom to 100%
+     */
+    resetZoom() {
+        this.currentZoom = 100;
+        this.applyZoom();
+    }
+    
+    /**
+     * Apply zoom level to the page
+     */
+    applyZoom() {
+        document.body.style.zoom = this.currentZoom / 100;
+        // Fallback for Firefox
+        document.body.style.transform = `scale(${this.currentZoom / 100})`;
+        document.body.style.transformOrigin = 'top left';
+        
+        this.updateZoomDisplay();
+        
+        // Save zoom preference
+        localStorage.setItem('lessonZoomLevel', this.currentZoom);
+        
+        // Dispatch zoom change event
+        window.dispatchEvent(new CustomEvent('zoomChanged', {
+            detail: { zoom: this.currentZoom }
+        }));
+    }
+    
+    /**
+     * Update zoom display
+     */
+    updateZoomDisplay() {
+        const zoomDisplay = document.getElementById('zoomDisplay');
+        if (zoomDisplay) {
+            zoomDisplay.textContent = this.currentZoom + '%';
+        }
+        
+        // Update button states
+        const zoomInBtn = document.getElementById('zoomIn');
+        const zoomOutBtn = document.getElementById('zoomOut');
+        
+        if (zoomInBtn) {
+            zoomInBtn.disabled = this.currentZoom >= this.maxZoom;
+        }
+        if (zoomOutBtn) {
+            zoomOutBtn.disabled = this.currentZoom <= this.minZoom;
+        }
+    }
+    
+    /**
+     * Load saved zoom level
+     */
+    loadSavedZoom() {
+        const savedZoom = localStorage.getItem('lessonZoomLevel');
+        if (savedZoom) {
+            this.currentZoom = Math.min(this.maxZoom, Math.max(this.minZoom, parseInt(savedZoom)));
+            this.applyZoom();
+        }
     }
     
     /**

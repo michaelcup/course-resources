@@ -110,6 +110,51 @@ body {
     align-items: center;
 }
 
+/* Zoom Controls in Progress Bar */
+.progress-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 1rem;
+}
+
+.zoom-button {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.zoom-button:hover {
+    background: var(--bg-code);
+    border-color: var(--primary-color);
+}
+
+.zoom-button:active {
+    transform: scale(0.95);
+}
+
+.zoom-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.zoom-display {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    min-width: 3rem;
+    text-align: center;
+}
+
 /* Enhanced Sun/Moon Theme Toggle */
 .theme-toggle {
     position: relative;
@@ -845,6 +890,356 @@ p, li {
     font-size: 0.9rem;
 }
 
+/* PDF Viewer Component */
+.pdf-viewer-container {
+    background: var(--bg-secondary);
+    border: 2px dashed var(--primary-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+}
+
+.pdf-preview-image {
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin: 1rem auto;
+    max-width: 600px;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pdf-preview-image:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.pdf-preview-image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.pdf-click-hint {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.pdf-download-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pdf-download-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* PDF Overlay for expanded view */
+.pdf-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.pdf-overlay.show {
+    display: flex;
+}
+
+.pdf-overlay-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.pdf-overlay-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    border-bottom: 1px solid #ccc;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2001;
+}
+
+.pdf-overlay-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.pdf-overlay-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.pdf-close-button {
+    background: var(--text-muted);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pdf-close-button:hover, .pdf-download-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.pdf-overlay-image {
+    padding: 2rem;
+    background: white;
+    text-align: center;
+}
+
+.pdf-overlay-image img {
+    max-width: 100%;
+    height: auto;
+    box-shadow: var(--shadow-md);
+    border-radius: 8px;
+}
+
+/* Additional styles for The Drill lesson */
+.drill-steps {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.drill-step {
+    background: var(--bg-code);
+    border-left: 4px solid var(--primary-color);
+    padding: 1.5rem;
+    border-radius: 0 8px 8px 0;
+}
+
+.step-number {
+    background: var(--primary-color);
+    color: white;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.step-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.conversation-section {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.conversation-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.conversation-exchange {
+    margin-bottom: 1.5rem;
+}
+
+.speaker {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.speaker-text {
+    margin-left: 1rem;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.timer-highlight {
+    background: var(--warning-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* Celebration Animation */
+.celebration-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 3000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.celebration-overlay.show {
+    display: flex;
+    animation: celebrationFadeIn 0.5s ease-out;
+}
+
+.celebration-content {
+    text-align: center;
+    color: white;
+    max-width: 400px;
+    padding: 2rem;
+}
+
+.celebration-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: celebrationBounce 1s ease-in-out infinite alternate;
+}
+
+.celebration-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    animation: celebrationSlideUp 0.6s ease-out 0.2s both;
+}
+
+.celebration-message {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    animation: celebrationSlideUp 0.6s ease-out 0.4s both;
+}
+
+.celebration-score {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    animation: celebrationSlideUp 0.6s ease-out 0.6s both;
+}
+
+.celebration-confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #ff6b6b;
+    animation: confettiFall 2s linear infinite;
+}
+
+.celebration-confetti:nth-child(2n) {
+    background: #4ecdc4;
+    animation-delay: 0.2s;
+    animation-duration: 2.2s;
+}
+
+.celebration-confetti:nth-child(3n) {
+    background: #45b7d1;
+    animation-delay: 0.4s;
+    animation-duration: 1.8s;
+}
+
+.celebration-confetti:nth-child(4n) {
+    background: #96ceb4;
+    animation-delay: 0.6s;
+    animation-duration: 2.4s;
+}
+
+.celebration-confetti:nth-child(5n) {
+    background: #ffeaa7;
+    animation-delay: 0.8s;
+    animation-duration: 2.1s;
+}
+
+@keyframes celebrationFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes celebrationBounce {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+}
+
+@keyframes celebrationSlideUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     body {
@@ -944,6 +1339,47 @@ p, li {
 
     .toggle-checkbox:checked ~ .toggle-slot .moon-icon-wrapper {
         transform: translate(2.8em, 0.5em) rotate(-15deg);
+    }
+
+    /* Responsive updates for zoom controls */
+    .progress-zoom-controls {
+        margin-right: 0.5rem;
+    }
+    
+    .zoom-button {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 0.75rem;
+    }
+    
+    .zoom-display {
+        font-size: 0.7rem;
+        min-width: 2.5rem;
+    }
+    
+    .pdf-overlay {
+        padding: 1rem;
+    }
+    
+    .pdf-overlay-content {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .pdf-overlay-header {
+        padding: 0.75rem 1rem;
+    }
+    
+    .pdf-overlay-image {
+        padding: 1rem;
+    }
+    
+    .celebration-title {
+        font-size: 1.5rem;
+    }
+    
+    .celebration-icon {
+        font-size: 3rem;
     }
 }
 
