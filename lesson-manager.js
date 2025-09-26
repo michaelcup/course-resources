@@ -523,7 +523,7 @@ class LessonManager {
             overlay.className = 'celebration-overlay';
             
             const messages = [
-                { icon: '🎉', title: 'Outstanding!', message: 'You\'ve mastered this lesson!' },
+                { icon: '🎉', title: 'Outstanding!', message: 'You\'ve completed this lesson!' },
                 { icon: '⭐', title: 'Excellent Work!', message: 'Your knowledge is growing stronger!' },
                 { icon: '🚀', title: 'Amazing Progress!', message: 'You\'re on fire today!' },
                 { icon: '💎', title: 'Brilliant!', message: 'You\'ve earned your mastery!' },

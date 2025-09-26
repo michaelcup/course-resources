@@ -365,6 +365,8 @@ body {
     max-width: 900px;
     margin: 0 auto;
     padding: 2rem;
+    font-size: 1rem; /* Base font size for zoom scaling */
+    transition: font-size 0.2s ease; /* Smooth zoom transitions */
 }
 
 /* Lesson Header */
@@ -718,10 +720,11 @@ p, li {
     padding: 2rem;
     margin: 2rem 0;
     position: relative;
+    font-size: 1em; /* Ensure relative sizing for zoom */
 }
 
 .quiz-header {
-    font-size: 1.25rem;
+    font-size: 1.25em; /* Changed to em for zoom scaling */
     font-weight: 600;
     margin-bottom: 1.5rem;
     display: flex;
@@ -1252,11 +1255,11 @@ p, li {
     }
 
     h1 {
-        font-size: 1.75rem;
+        font-size: 1.75em; /* Keep em units for zoom scaling */
     }
 
     h2 {
-        font-size: 1.5rem;
+        font-size: 1.3em; /* Keep em units for zoom scaling */
     }
 
     .lesson-meta {

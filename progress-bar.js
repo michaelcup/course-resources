@@ -101,6 +101,11 @@ class ProgressBar {
      * Initialize and inject the progress bar
      */
     init() {
+        // Reset any previous body scaling (in case old version was used)
+        document.body.style.zoom = '';
+        document.body.style.transform = '';
+        document.body.style.transformOrigin = '';
+        
         // Create the element
         this.createElement();
         
@@ -222,10 +227,13 @@ class ProgressBar {
      * Apply zoom level to the page
      */
     applyZoom() {
-        document.body.style.zoom = this.currentZoom / 100;
-        // Fallback for Firefox
-        document.body.style.transform = `scale(${this.currentZoom / 100})`;
-        document.body.style.transformOrigin = 'top left';
+        // Target the main content container instead of the entire body
+        const contentContainer = document.querySelector('.lesson-container');
+        if (contentContainer) {
+            // Simply adjust the font-size - CSS em/rem units will scale accordingly
+            const fontScale = this.currentZoom / 100;
+            contentContainer.style.fontSize = fontScale + 'rem';
+        }
         
         this.updateZoomDisplay();
         
