@@ -122,7 +122,7 @@ class LessonBuilder {
             card.appendChild(title);
         }
         
-        if (item.text) {
+        if (item.text && item.text.trim()) {
             const text = document.createElement('p');
             text.innerHTML = item.text;
             card.appendChild(text);
@@ -136,6 +136,23 @@ class LessonBuilder {
                 ul.appendChild(li);
             });
             card.appendChild(ul);
+        }
+        
+        if (item.numbered_items) {
+            const ol = document.createElement('ol');
+            ol.className = 'numbered-list';
+            item.numbered_items.forEach(itemText => {
+                const li = document.createElement('li');
+                li.innerHTML = itemText;
+                ol.appendChild(li);
+            });
+            card.appendChild(ol);
+        }
+        
+        if (item.additional_text) {
+            const additionalText = document.createElement('p');
+            additionalText.innerHTML = item.additional_text;
+            card.appendChild(additionalText);
         }
         
         return card;
@@ -281,8 +298,15 @@ class LessonBuilder {
      */
     renderQuiz() {
         const container = document.getElementById('quizQuestions');
-        if (!container || typeof lessonQuiz === 'undefined') {
-            console.warn('Quiz container not found or lessonQuiz not defined');
+        if (!container) {
+            console.warn('Quiz container not found');
+            return;
+        }
+        
+        // Check if lessonQuiz is defined and is an array
+        if (typeof lessonQuiz === 'undefined' || !Array.isArray(lessonQuiz)) {
+            console.warn('lessonQuiz not defined or not an array');
+            container.innerHTML = '<p>Quiz questions are loading...</p>';
             return;
         }
         
