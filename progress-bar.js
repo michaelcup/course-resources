@@ -67,6 +67,10 @@ class ProgressBar {
             <div class="theme-toggle">
                 <input class="toggle-checkbox" type="checkbox" id="themeToggleCheckbox">
                 <div class="toggle-slot">
+                    <div class="sun-icon-wrapper">
+                    <div class="toggle-button"></div>
+                    <div class="moon-icon-wrapper">
+                    </div>
                 </div>
             </div>
         `;
