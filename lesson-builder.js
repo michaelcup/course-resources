@@ -122,7 +122,7 @@ class LessonBuilder {
             card.appendChild(title);
         }
         
-        if (item.text) {
+        if (item.text && item.text.trim()) {
             const text = document.createElement('p');
             text.innerHTML = item.text;
             card.appendChild(text);
@@ -136,6 +136,12 @@ class LessonBuilder {
                 ul.appendChild(li);
             });
             card.appendChild(ul);
+        }
+        
+        if (item.additional_text) {
+            const additionalText = document.createElement('p');
+            additionalText.innerHTML = item.additional_text;
+            card.appendChild(additionalText);
         }
         
         return card;
@@ -281,9 +287,32 @@ class LessonBuilder {
      */
     renderQuiz() {
         const container = document.getElementById('quizQuestions');
-        if (!container || typeof lessonQuiz === 'undefined') {
-            console.warn('Quiz container not found or lessonQuiz not defined');
+        const quizContainer = document.getElementById('quizContainer');
+        
+        if (!container) {
+            console.warn('Quiz container not found');
             return;
+        }
+        
+        // Check if lessonQuiz is defined and is an array
+        if (typeof lessonQuiz === 'undefined' || !Array.isArray(lessonQuiz)) {
+            console.warn('lessonQuiz not defined or not an array');
+            container.innerHTML = '<p>Quiz questions are loading...</p>';
+            return;
+        }
+        
+        // If quiz is empty, hide the entire quiz section
+        if (lessonQuiz.length === 0) {
+            console.log('No quiz questions - hiding quiz section');
+            if (quizContainer) {
+                quizContainer.style.display = 'none';
+            }
+            return;
+        }
+        
+        // Show quiz container (in case it was previously hidden)
+        if (quizContainer) {
+            quizContainer.style.display = 'block';
         }
         
         container.innerHTML = '';
