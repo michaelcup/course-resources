@@ -1310,6 +1310,7 @@ p, li {
 
 .celebration-confetti {
     position: absolute;
+    top: 0;
     width: 10px;
     height: 10px;
     background: #ff6b6b;
