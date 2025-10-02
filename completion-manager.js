@@ -1,7 +1,7 @@
 /**
  * Completion Manager for Thinkific Lessons
  * Handles completion messages and celebration animations
- * Version 2.0 - Updated with new confetti system
+ * Version 1.0
  */
 
 class CompletionManager {
@@ -32,7 +32,7 @@ class CompletionManager {
             { icon: '🌟', title: 'Superstar!', message: 'Your dedication is truly inspiring!' },
             { icon: '🎯', title: 'Bullseye!', message: 'You\'re hitting every learning target!' },
             { icon: '⚡', title: 'Electric!', message: 'Your progress is absolutely electrifying!' },
-            { icon: '🥇', title: 'Gold Standard!', message: 'You\'re setting the bar high!' },
+            { icon: '🏅', title: 'Gold Standard!', message: 'You\'re setting the bar high!' },
             { icon: '🦅', title: 'Soaring High!', message: 'Your potential knows no limits!' },
             { icon: '🔑', title: 'Key Master!', message: 'You\'re unlocking your true potential!' },
             { icon: '🌈', title: 'Breakthrough!', message: 'You\'re creating your own success story!' },
@@ -97,111 +97,56 @@ class CompletionManager {
      * Show celebration animation when lesson/quiz is completed
      */
     showCelebration(score = 100) {
-        const overlay = document.getElementById('celebrationOverlay');
-        
+        // Create celebration overlay if it doesn't exist
+        let overlay = document.getElementById('celebrationOverlay');
         if (!overlay) {
-            console.warn('Celebration overlay not found');
-            return;
+            overlay = this.createCelebrationOverlay(score);
+            document.body.appendChild(overlay);
         }
         
-        // Clear previous content and remove hide class
-        overlay.innerHTML = '';
-        overlay.classList.remove('hide');
+        // Show the celebration
+        overlay.classList.add('show');
         
-        // Create new content
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'celebration-content';
+        // Hide after 3 seconds
+        setTimeout(() => {
+            overlay.classList.remove('show');
+        }, 3000);
+        
+        console.log('Celebration shown for score:', score + '%');
+    }
+    
+    /**
+     * Create celebration overlay element
+     */
+    createCelebrationOverlay(score) {
+        const overlay = document.createElement('div');
+        overlay.id = 'celebrationOverlay';
+        overlay.className = 'celebration-overlay';
         
         // Get random celebration message
         const randomMessage = this.config.celebrationMessages[
             Math.floor(Math.random() * this.config.celebrationMessages.length)
         ];
         
-        contentDiv.innerHTML = `
-            <div class="celebration-icon">${randomMessage.icon}</div>
-            <div class="celebration-title">${randomMessage.title}</div>
-            <div class="celebration-message">${randomMessage.message}</div>
-            <div class="celebration-score">Score: ${score}%</div>
+        overlay.innerHTML = `
+            <div class="celebration-content">
+                <div class="celebration-icon">${randomMessage.icon}</div>
+                <div class="celebration-title">${randomMessage.title}</div>
+                <div class="celebration-message">${randomMessage.message}</div>
+                <div class="celebration-score">Score: ${score}%</div>
+            </div>
         `;
         
-        overlay.appendChild(contentDiv);
-        
-        // Create confetti - shooting from bottom left and right only
-        const colors = ['blue-1', 'blue-2', 'orange-1', 'orange-2'];
-        const shapes = ['circle', 'square', 'rectangle'];
-        
-        for (let i = 0; i < 100; i++) {
+        // Add confetti
+        for (let i = 0; i < 50; i++) {
             const confetti = document.createElement('div');
             confetti.className = 'celebration-confetti';
-            
-            // Random color (blue or orange)
-            const colorClass = colors[Math.floor(Math.random() * colors.length)];
-            confetti.classList.add(colorClass);
-            
-            // Random shape
-            const shapeClass = shapes[Math.floor(Math.random() * shapes.length)];
-            confetti.classList.add(shapeClass);
-            
-            // Determine side (left or right)
-            const fromLeft = i < 50; // First 50 from left, rest from right
-            
-            // Random end position (shooting upward and across)
-            let xEnd, yEnd;
-            if (fromLeft) {
-                // From bottom left - shoot up and to the right
-                xEnd = Math.random() * 800 + 200; // 200-1000px to the right
-                yEnd = -(Math.random() * 600 + 400); // -400 to -1000px up
-            } else {
-                // From bottom right - shoot up and to the left
-                xEnd = -(Math.random() * 800 + 200); // -200 to -1000px to the left
-                yEnd = -(Math.random() * 600 + 400); // -400 to -1000px up
-            }
-            
-            const rotation = Math.random() * 1080 + 360; // 360-1440 degrees
-            
-            // Set CSS variables for animation
-            confetti.style.setProperty('--x-end', `${xEnd}px`);
-            confetti.style.setProperty('--y-end', `${yEnd}px`);
-            confetti.style.setProperty('--rotation', `${rotation}deg`);
-            
-            // Faster animation - 1-1.8s instead of 2-3.5s
-            const duration = (Math.random() * 0.8 + 1) + 's'; // 1-1.8s
-            const delay = Math.random() * 0.3 + 's'; // 0-0.3s
-            
-            const animationName = fromLeft ? 'confettiFromBottomLeft' : 'confettiFromBottomRight';
-            confetti.style.animation = `${animationName} ${duration} cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay} both`;
-            
-            // Slight size variation
-            const size = 8 + Math.random() * 8;
-            confetti.style.width = size + 'px';
-            confetti.style.height = size + 'px';
-            
-            // Starting position
-            if (fromLeft) {
-                confetti.style.left = '0';
-                confetti.style.bottom = '0';
-            } else {
-                confetti.style.right = '0';
-                confetti.style.bottom = '0';
-            }
-            
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.animationDelay = Math.random() * 2 + 's';
             overlay.appendChild(confetti);
         }
         
-        // Show the celebration
-        overlay.classList.add('show');
-        
-        // Start fade out after 3 seconds
-        setTimeout(() => {
-            overlay.classList.add('hide');
-            
-            // Actually remove display after fade completes
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 500); // Match the CSS transition duration
-        }, 3000);
-        
-        console.log('Celebration shown for score:', score + '%');
+        return overlay;
     }
     
     /**

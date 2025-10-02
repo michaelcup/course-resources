@@ -515,134 +515,53 @@ class LessonManager {
      * Show celebration animation when quiz is passed
      */
     showCelebration(score = 100) {
-        const overlay = document.getElementById('celebrationOverlay');
-        
+        // Create celebration overlay if it doesn't exist
+        let overlay = document.getElementById('celebrationOverlay');
         if (!overlay) {
-            // Create overlay if it doesn't exist
-            const newOverlay = document.createElement('div');
-            newOverlay.id = 'celebrationOverlay';
-            newOverlay.className = 'celebration-overlay';
-            document.body.appendChild(newOverlay);
-        }
-        
-        // Use CompletionManager if available, otherwise use built-in
-        if (window.completionManager && typeof window.completionManager.showCelebration === 'function') {
-            window.completionManager.showCelebration(score);
-        } else {
-            // Fallback to built-in celebration
-            this.showBuiltInCelebration(score);
-        }
-        
-        this.log('Celebration shown for score:', score + '%');
-    }
-    
-    /**
-     * Built-in celebration (same as CompletionManager but as fallback)
-     */
-    showBuiltInCelebration(score = 100) {
-        const overlay = document.getElementById('celebrationOverlay');
-        if (!overlay) return;
-        
-        // Clear previous content and remove hide class
-        overlay.innerHTML = '';
-        overlay.classList.remove('hide');
-        
-        // Create new content
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'celebration-content';
-        
-        const messages = [
-            { icon: '🎉', title: 'Outstanding!', message: 'You\'ve completed this lesson!' },
-            { icon: '⭐', title: 'Excellent Work!', message: 'Your knowledge is growing stronger!' },
-            { icon: '🚀', title: 'Amazing Progress!', message: 'You\'re on fire today!' },
-            { icon: '💎', title: 'Brilliant!', message: 'You\'ve earned your mastery!' },
-            { icon: '🏆', title: 'Champion!', message: 'Another lesson conquered!' },
-            { icon: '🔥', title: 'On Fire!', message: 'Your learning momentum is unstoppable!' },
-            { icon: '💪', title: 'Powerhouse!', message: 'You\'re building incredible mental strength!' },
-            { icon: '🌟', title: 'Superstar!', message: 'Your dedication is truly inspiring!' }
-        ];
-        
-        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-        
-        contentDiv.innerHTML = `
-            <div class="celebration-icon">${randomMessage.icon}</div>
-            <div class="celebration-title">${randomMessage.title}</div>
-            <div class="celebration-message">${randomMessage.message}</div>
-            <div class="celebration-score">Score: ${score}%</div>
-        `;
-        
-        overlay.appendChild(contentDiv);
-        
-        // Create confetti - shooting from bottom left and right only
-        const colors = ['blue-1', 'blue-2', 'orange-1', 'orange-2'];
-        const shapes = ['circle', 'square', 'rectangle'];
-        
-        for (let i = 0; i < 100; i++) {
-            const confetti = document.createElement('div');
-            confetti.className = 'celebration-confetti';
+            overlay = document.createElement('div');
+            overlay.id = 'celebrationOverlay';
+            overlay.className = 'celebration-overlay';
             
-            // Random color (blue or orange)
-            const colorClass = colors[Math.floor(Math.random() * colors.length)];
-            confetti.classList.add(colorClass);
+            const messages = [
+                { icon: '🎉', title: 'Outstanding!', message: 'You\'ve completed this lesson!' },
+                { icon: '⭐', title: 'Excellent Work!', message: 'Your knowledge is growing stronger!' },
+                { icon: '🚀', title: 'Amazing Progress!', message: 'You\'re on fire today!' },
+                { icon: '💎', title: 'Brilliant!', message: 'You\'ve earned your mastery!' },
+                { icon: '🏆', title: 'Champion!', message: 'Another lesson conquered!' }
+            ];
             
-            // Random shape
-            const shapeClass = shapes[Math.floor(Math.random() * shapes.length)];
-            confetti.classList.add(shapeClass);
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
             
-            // Determine side (left or right)
-            const fromLeft = i < 50;
+            overlay.innerHTML = `
+                <div class="celebration-content">
+                    <div class="celebration-icon">${randomMessage.icon}</div>
+                    <div class="celebration-title">${randomMessage.title}</div>
+                    <div class="celebration-message">${randomMessage.message}</div>
+                    <div class="celebration-score">Score: ${score}%</div>
+                </div>
+            `;
             
-            // Random end position
-            let xEnd, yEnd;
-            if (fromLeft) {
-                xEnd = Math.random() * 800 + 200;
-                yEnd = -(Math.random() * 600 + 400);
-            } else {
-                xEnd = -(Math.random() * 800 + 200);
-                yEnd = -(Math.random() * 600 + 400);
+            // Add confetti
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'celebration-confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                overlay.appendChild(confetti);
             }
             
-            const rotation = Math.random() * 1080 + 360;
-            
-            // Set CSS variables
-            confetti.style.setProperty('--x-end', `${xEnd}px`);
-            confetti.style.setProperty('--y-end', `${yEnd}px`);
-            confetti.style.setProperty('--rotation', `${rotation}deg`);
-            
-            // Faster animation
-            const duration = (Math.random() * 0.8 + 1) + 's';
-            const delay = Math.random() * 0.3 + 's';
-            
-            const animationName = fromLeft ? 'confettiFromBottomLeft' : 'confettiFromBottomRight';
-            confetti.style.animation = `${animationName} ${duration} cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay} both`;
-            
-            // Size variation
-            const size = 8 + Math.random() * 8;
-            confetti.style.width = size + 'px';
-            confetti.style.height = size + 'px';
-            
-            // Position
-            if (fromLeft) {
-                confetti.style.left = '0';
-                confetti.style.bottom = '0';
-            } else {
-                confetti.style.right = '0';
-                confetti.style.bottom = '0';
-            }
-            
-            overlay.appendChild(confetti);
+            document.body.appendChild(overlay);
         }
         
-        // Show celebration
+        // Show the celebration
         overlay.classList.add('show');
         
-        // Fade out after 3 seconds
+        // Hide after 3 seconds
         setTimeout(() => {
-            overlay.classList.add('hide');
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 500);
+            overlay.classList.remove('show');
         }, 3000);
+        
+        this.log('Celebration shown for score:', score + '%');
     }
     
     getAnalytics() {
