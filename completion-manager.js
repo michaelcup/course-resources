@@ -32,7 +32,11 @@ class CompletionManager {
             { icon: '🌟', title: 'Superstar!', message: 'Your dedication is truly inspiring!' },
             { icon: '🎯', title: 'Bullseye!', message: 'You\'re hitting every learning target!' },
             { icon: '⚡', title: 'Electric!', message: 'Your progress is absolutely electrifying!' },
-            { icon: '🥇', title: 'Gold Standard!', message: 'You\'re setting the bar high!' }
+            { icon: '🥇', title: 'Gold Standard!', message: 'You\'re setting the bar high!' },
+            { icon: '🦅', title: 'Soaring High!', message: 'Your potential knows no limits!' },
+            { icon: '🔑', title: 'Key Master!', message: 'You\'re unlocking your true potential!' },
+            { icon: '🌈', title: 'Breakthrough!', message: 'You\'re creating your own success story!' },
+            { icon: '🎪', title: 'Show Stopper!', message: 'Your commitment is absolutely phenomenal!' }
         ];
     }
     
@@ -42,22 +46,6 @@ class CompletionManager {
     init() {
         this.setCompletionMessage();
         this.setupEventListeners();
-        this.ensureOverlayExists();
-    }
-    
-    /**
-     * Ensure the celebration overlay exists in the DOM
-     */
-    ensureOverlayExists() {
-        let overlay = document.getElementById('celebrationOverlay');
-        
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'celebrationOverlay';
-            overlay.className = 'celebration-overlay';
-            document.body.appendChild(overlay);
-            console.log('[CompletionManager] Created celebration overlay');
-        }
     }
     
     /**
@@ -109,13 +97,10 @@ class CompletionManager {
      * Show celebration animation when lesson/quiz is completed
      */
     showCelebration(score = 100) {
-        // Ensure overlay exists
-        this.ensureOverlayExists();
-        
         const overlay = document.getElementById('celebrationOverlay');
         
         if (!overlay) {
-            console.error('[CompletionManager] Could not create celebration overlay');
+            console.warn('Celebration overlay not found');
             return;
         }
         
@@ -216,7 +201,7 @@ class CompletionManager {
             }, 500); // Match the CSS transition duration
         }, 3000);
         
-        console.log('[CompletionManager] Celebration shown for score:', score + '%');
+        console.log('Celebration shown for score:', score + '%');
     }
     
     /**
