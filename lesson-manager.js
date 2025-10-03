@@ -15,6 +15,9 @@ class LessonManager {
         this.quizState = 'not-started';
         this.debug = options.debug || false;
         
+        // Check if quiz exists
+        this.hasQuiz = this.checkForQuiz();
+        
         // Quiz configuration
         this.quizConfig = {
             passingScore: options.passingScore || 100,
@@ -26,6 +29,18 @@ class LessonManager {
         this.highestScrollProgress = 0;
         
         this.init();
+    }
+    
+    /**
+     * Check if this lesson has a quiz
+     */
+    checkForQuiz() {
+        // Check if lessonQuiz is defined and has questions
+        if (typeof lessonQuiz === 'undefined' || !Array.isArray(lessonQuiz)) {
+            return false;
+        }
+        
+        return lessonQuiz.length > 0;
     }
     
     /**
@@ -42,12 +57,18 @@ class LessonManager {
         // Now declare requirements with completion state
         this.declareLessonRequirements();
         
-        // If quiz was already passed, notify parent immediately
-        if (this.requirements.quizPassed) {
-            setTimeout(() => {
-                this.notifyCompletion();
-                this.log('Previously completed lesson - notified parent');
-            }, 500);
+        // Handle completion notification based on quiz presence
+        if (this.hasQuiz) {
+            // If quiz was already passed, notify parent immediately
+            if (this.requirements.quizPassed) {
+                setTimeout(() => {
+                    this.notifyCompletion();
+                    this.log('Previously completed quiz - notified parent');
+                }, 500);
+            }
+        } else {
+            // No quiz - lesson is always "complete" for button purposes
+            this.log('No quiz detected - lesson does not require completion');
         }
         
         // Initial scroll check
@@ -379,16 +400,25 @@ class LessonManager {
     
     declareLessonRequirements() {
         if (window.parent !== window) {
+            // Determine if completion is required
+            // No quiz = no completion requirement
+            // Has quiz but already passed = already completed
+            const requiresCompletion = this.hasQuiz;
+            const alreadyCompleted = this.hasQuiz && this.requirements.quizPassed;
+            
             window.parent.postMessage({
                 type: 'lesson_requirements',
                 lesson: this.lessonId,
-                requires_completion: true,
-                already_completed: this.requirements.quizPassed, // Send completion state
-                requirements: { quiz: true, content: true }
+                requires_completion: requiresCompletion,
+                already_completed: alreadyCompleted,
+                has_quiz: this.hasQuiz,
+                requirements: { quiz: this.hasQuiz, content: true }
             }, '*');
             
             this.log('Declared lesson requirements to parent', {
-                already_completed: this.requirements.quizPassed
+                has_quiz: this.hasQuiz,
+                requires_completion: requiresCompletion,
+                already_completed: alreadyCompleted
             });
         }
     }
