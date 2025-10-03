@@ -1,12 +1,12 @@
 /**
- * Thinkific Multimedia Lesson Manager v2.5
- * Simplified to focus on reliable scroll tracking only
+ * Thinkific Multimedia Lesson Manager v2.6
+ * Enhanced with completion state detection
  */
 
 class LessonManager {
     constructor(options = {}) {
         this.requirements = {
-            contentProgress: 0,  // 0-100% based on highest scroll reached
+            contentProgress: 0,
             quizPassed: false
         };
         
@@ -17,8 +17,8 @@ class LessonManager {
         
         // Quiz configuration
         this.quizConfig = {
-            passingScore: options.passingScore || 100, // Percentage needed to pass (default 100%)
-            showCelebration: options.showCelebration !== false, // Whether to show celebration animation
+            passingScore: options.passingScore || 100,
+            showCelebration: options.showCelebration !== false,
             ...options.quizConfig
         };
         
@@ -32,11 +32,23 @@ class LessonManager {
      * Initialize the lesson manager
      */
     init() {
-        this.log('Initializing simple scroll lesson manager for:', this.lessonId);
+        this.log('Initializing lesson manager for:', this.lessonId);
         
         this.setupEventListeners();
+        
+        // Load progress BEFORE declaring requirements
         this.loadProgress();
+        
+        // Now declare requirements with completion state
         this.declareLessonRequirements();
+        
+        // If quiz was already passed, notify parent immediately
+        if (this.requirements.quizPassed) {
+            setTimeout(() => {
+                this.notifyCompletion();
+                this.log('Previously completed lesson - notified parent');
+            }, 500);
+        }
         
         // Initial scroll check
         setTimeout(() => {
@@ -50,12 +62,10 @@ class LessonManager {
      * Track scroll progress - simple and reliable, stops at quiz
      */
     trackScrollProgress() {
-        // Find where the content ends (before quiz)
         const contentEndElement = this.findContentEnd();
         
         let scrollableHeight;
         if (contentEndElement) {
-            // Calculate scrollable area up to content end
             const contentEndTop = contentEndElement.offsetTop + contentEndElement.offsetHeight;
             const windowHeight = window.innerHeight;
             scrollableHeight = Math.max(0, contentEndTop - windowHeight);
@@ -64,7 +74,6 @@ class LessonManager {
                 this.log('Content fits in viewport, no scrolling needed for 100%');
             }
         } else {
-            // Fallback to full document if no content end found
             const documentHeight = document.documentElement.scrollHeight;
             const windowHeight = window.innerHeight;
             scrollableHeight = documentHeight - windowHeight;
@@ -74,18 +83,15 @@ class LessonManager {
             }
         }
         
-        // Calculate current scroll progress
         const scrollTop = window.scrollY;
         let currentScrollProgress = 0;
         
         if (scrollableHeight > 0) {
             currentScrollProgress = Math.min(100, Math.max(0, (scrollTop / scrollableHeight) * 100));
         } else {
-            // If content fits in viewport, any scroll gives 100%
             currentScrollProgress = scrollTop > 10 ? 100 : 0;
         }
         
-        // Only update if this is higher than our previous highest
         if (currentScrollProgress > this.highestScrollProgress) {
             this.highestScrollProgress = currentScrollProgress;
             this.requirements.contentProgress = this.highestScrollProgress;
@@ -93,54 +99,45 @@ class LessonManager {
             this.updateProgressDisplay();
             
             if (this.debug) {
-                this.log(`Scroll progress updated: ${this.highestScrollProgress.toFixed(1)}% (scrolled: ${scrollTop}px of ${scrollableHeight}px to content end)`);
+                this.log(`Scroll progress updated: ${this.highestScrollProgress.toFixed(1)}%`);
             }
             
-            // Save progress
             this.saveProgress();
-        } else if (this.debug) {
-            this.log(`Scroll progress unchanged: current ${currentScrollProgress.toFixed(1)}% <= highest ${this.highestScrollProgress.toFixed(1)}%`);
         }
     }
     
     /**
-     * Find where the reading content ends (before quiz/interactive elements)
+     * Find where the reading content ends
      */
     findContentEnd() {
-        // Look for content end markers in order of preference
         const selectors = [
-            '.content-section',      // Main content wrapper
-            '.lesson-content',       // Alternative content wrapper
-            '#content',              // Generic content ID
-            '.quiz-container',       // Stop before quiz
-            '#quizContainer',        // Alternative quiz ID
+            '.content-section',
+            '.lesson-content',
+            '#content',
+            '.quiz-container',
+            '#quizContainer',
         ];
         
         for (const selector of selectors) {
             const element = document.querySelector(selector);
             if (element) {
-                // If it's a quiz element, we want the previous sibling (the content before it)
                 if (selector.includes('quiz')) {
                     const prevElement = element.previousElementSibling;
                     if (prevElement) {
                         if (this.debug) {
-                            this.log(`Content end found before ${selector}: ${prevElement.tagName}${prevElement.className ? '.' + prevElement.className : ''}`);
+                            this.log(`Content end found before ${selector}`);
                         }
                         return prevElement;
                     }
                 } else {
-                    // For content sections, use the end of that section
                     if (this.debug) {
-                        this.log(`Content end found at end of ${selector}: ${element.tagName}${element.className ? '.' + element.className : ''}`);
+                        this.log(`Content end found at end of ${selector}`);
                     }
                     return element;
                 }
             }
         }
         
-        if (this.debug) {
-            this.log('No content end element found, will use full document');
-        }
         return null;
     }
     
@@ -148,25 +145,22 @@ class LessonManager {
      * Set up event listeners
      */
     setupEventListeners() {
-        // Quiz answer clicks
         document.querySelectorAll('.answer-option').forEach(option => {
             option.addEventListener('click', (e) => this.handleAnswerClick(e));
         });
         
-        // Simple scroll tracking
         this.setupScrollTracking();
         
         this.log('Event listeners setup complete');
     }
     
     /**
-     * Set up scroll tracking - simple throttled version
+     * Set up scroll tracking
      */
     setupScrollTracking() {
         let scrollTimeout;
         
         const handleScroll = () => {
-            // Throttle scroll events
             clearTimeout(scrollTimeout);
             scrollTimeout = setTimeout(() => {
                 this.trackScrollProgress();
@@ -175,30 +169,26 @@ class LessonManager {
         
         window.addEventListener('scroll', handleScroll, { passive: true });
         
-        // Also track on window resize
         window.addEventListener('resize', () => {
             setTimeout(() => {
                 this.trackScrollProgress();
             }, 100);
         });
         
-        this.log('Simple scroll tracking enabled');
+        this.log('Scroll tracking enabled');
     }
     
     /**
      * Update progress display
      */
     updateProgressDisplay() {
-        // Update progress bar
         const progressBar = document.getElementById('progressBar') || document.querySelector('.progress-bar-fill');
         if (progressBar) {
             progressBar.style.width = this.requirements.contentProgress + '%';
         }
         
-        // Update status indicators
         this.updateBottomBarStatus();
         
-        // Dispatch event for modular UI
         window.dispatchEvent(new CustomEvent('lessonProgressUpdated', {
             detail: {
                 contentProgress: this.requirements.contentProgress,
@@ -217,7 +207,6 @@ class LessonManager {
         const quizIcon = document.getElementById('quizIcon');
         const quizText = quizIcon?.nextElementSibling;
         
-        // Update reading/content status
         if (readingIcon && readingText) {
             if (this.requirements.contentProgress >= 90) {
                 readingIcon.classList.remove('incomplete');
@@ -230,7 +219,6 @@ class LessonManager {
             }
         }
         
-        // Update quiz status
         if (quizIcon && quizText) {
             quizIcon.className = 'requirement-icon';
             
@@ -327,7 +315,6 @@ class LessonManager {
                 }
             }
             
-            // Show celebration animation
             if (this.quizConfig.showCelebration) {
                 this.showCelebration(scorePercentage);
             }
@@ -346,13 +333,7 @@ class LessonManager {
         this.updateProgressDisplay();
         this.saveProgress();
         
-        this.log('Quiz checked:', { 
-            correctCount, 
-            total: questions.length, 
-            scorePercentage, 
-            passingScore: this.quizConfig.passingScore,
-            passed 
-        });
+        this.log('Quiz checked:', { correctCount, total: questions.length, scorePercentage, passed });
     }
     
     /**
@@ -402,10 +383,13 @@ class LessonManager {
                 type: 'lesson_requirements',
                 lesson: this.lessonId,
                 requires_completion: true,
+                already_completed: this.requirements.quizPassed, // Send completion state
                 requirements: { quiz: true, content: true }
             }, '*');
             
-            this.log('Declared lesson requirements to parent');
+            this.log('Declared lesson requirements to parent', {
+                already_completed: this.requirements.quizPassed
+            });
         }
     }
     
@@ -417,7 +401,6 @@ class LessonManager {
                 this.requirements = { ...this.requirements, ...progress.requirements };
                 this.quizState = progress.quizState || 'not-started';
                 
-                // Load the highest scroll progress achieved
                 this.highestScrollProgress = progress.highestScrollProgress || this.requirements.contentProgress || 0;
                 this.requirements.contentProgress = this.highestScrollProgress;
                 
@@ -427,7 +410,7 @@ class LessonManager {
                     this.setQuizState('completed');
                 }
                 
-                this.log('Progress loaded:', this.requirements, 'Highest scroll:', this.highestScrollProgress);
+                this.log('Progress loaded:', this.requirements, 'Quiz passed:', this.requirements.quizPassed);
             }
         } catch (error) {
             console.error('Error loading progress:', error);
@@ -444,7 +427,7 @@ class LessonManager {
                 selectedAnswers: this.selectedAnswers
             };
             localStorage.setItem(`lesson_${this.lessonId}_progress`, JSON.stringify(progress));
-            this.log('Progress saved, highest scroll:', this.highestScrollProgress);
+            this.log('Progress saved');
         } catch (error) {
             console.error('Error saving progress:', error);
         }
@@ -511,11 +494,7 @@ class LessonManager {
         }
     }
     
-    /**
-     * Show celebration animation when quiz is passed
-     */
     showCelebration(score = 100) {
-        // Create celebration overlay if it doesn't exist
         let overlay = document.getElementById('celebrationOverlay');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -541,7 +520,6 @@ class LessonManager {
                 </div>
             `;
             
-            // Add confetti
             for (let i = 0; i < 50; i++) {
                 const confetti = document.createElement('div');
                 confetti.className = 'celebration-confetti';
@@ -553,10 +531,8 @@ class LessonManager {
             document.body.appendChild(overlay);
         }
         
-        // Show the celebration
         overlay.classList.add('show');
         
-        // Hide after 3 seconds
         setTimeout(() => {
             overlay.classList.remove('show');
         }, 3000);
@@ -577,5 +553,4 @@ class LessonManager {
     }
 }
 
-// Export for use in other modules or global scope
 window.LessonManager = LessonManager;

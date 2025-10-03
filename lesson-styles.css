@@ -1268,13 +1268,10 @@ p, li {
     pointer-events: none;
     will-change: transform;
     backdrop-filter: blur(4px);
-    opacity: 0;
-    transition: opacity 0.5s ease-out; /* Add smooth transition */
 }
 
 .celebration-overlay.show {
     display: flex;
-    opacity: 1;
     animation: celebrationFadeIn 0.5s ease-out;
 }
 
